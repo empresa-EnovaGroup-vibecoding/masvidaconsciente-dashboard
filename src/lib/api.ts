@@ -1,0 +1,114 @@
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+}
+
+export function setToken(token: string) {
+  localStorage.setItem("token", token);
+}
+
+export function clearToken() {
+  localStorage.removeItem("token");
+}
+
+export function isLoggedIn(): boolean {
+  return !!getToken();
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new Error("Sesión expirada");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Error" }));
+    throw new Error(err.detail || "Error en la solicitud");
+  }
+  return res.json();
+}
+
+export async function login(email: string, password: string) {
+  const res = await fetch(`${API_URL}/api/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Error" }));
+    throw new Error(err.detail || "Credenciales incorrectas");
+  }
+  const data = await res.json();
+  setToken(data.access_token);
+}
+
+// ─── Tipos ───────────────────────────────────────────────────────────
+
+export interface Metricas {
+  pedidos_hoy: number;
+  ventas_hoy_usd: number;
+  clientes_total: number;
+  pedidos_pendientes: number;
+}
+
+export interface ItemPedido {
+  producto: string;
+  cantidad: number;
+  precio_unitario: number | null;
+  presentacion?: string | null;
+}
+
+export interface Pedido {
+  id: number;
+  cliente: string;
+  estado: string;
+  items: ItemPedido[];
+  total_usd: number;
+  notas: string | null;
+  fecha: string;
+}
+
+export interface Producto {
+  id: number;
+  nombre: string;
+  categoria: string | null;
+  descripcion: string | null;
+  precio: number | null;
+  presentacion: string | null;
+  disponible: boolean;
+}
+
+export interface Conversacion {
+  telefono: string;
+  nombre: string | null;
+  ultimo_mensaje: string | null;
+  ultima_interaccion: string;
+}
+
+export interface Mensaje {
+  rol: string;
+  contenido: string;
+  fecha: string;
+}
+
+// ─── Endpoints ───────────────────────────────────────────────────────
+
+export const getMetricas = () => request<Metricas>("/api/metricas");
+export const getPedidos = () => request<Pedido[]>("/api/pedidos");
+export const cambiarEstadoPedido = (id: number, estado: string) =>
+  request(`/api/pedidos/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
+export const getProductos = () => request<Producto[]>("/api/productos");
+export const getConversaciones = () => request<Conversacion[]>("/api/conversaciones");
+export const getMensajes = (telefono: string) =>
+  request<Mensaje[]>(`/api/conversaciones/${telefono}`);
