@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Leaf } from "lucide-react";
 import { login } from "@/lib/api";
 
 export default function LoginPage() {
@@ -27,36 +26,45 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-marca-50 px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-8">
-          <div className="h-16 w-16 rounded-2xl bg-marca-600 flex items-center justify-center mb-4">
-            <Leaf className="h-8 w-8 text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-bg-subtle px-4">
+      <div className="w-full max-w-[360px]">
+        <div className="flex flex-col items-center mb-10">
+          <div className="h-11 w-11 rounded-2xl bg-accent flex items-center justify-center mb-5">
+            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white">
+              <path
+                d="M11 20A7 7 0 0 1 4 13c0-4 3-7 8-9 1 5-1 9-4 11"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
-          <h1 className="text-2xl font-semibold text-marca-900">masvidaconsciente</h1>
-          <p className="text-sm text-marca-600 mt-1">Panel de gestión</p>
+          <h1 className="text-xl font-semibold tracking-tight text-fg">masvidaconsciente</h1>
+          <p className="text-sm text-fg-muted mt-1">Panel de gestión</p>
         </div>
 
-        <form onSubmit={onSubmit} className="bg-white rounded-2xl shadow-sm border border-marca-100 p-6 space-y-4">
+        <form onSubmit={onSubmit} className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-marca-900 mb-1">Correo</label>
+            <label className="block text-xs font-medium text-fg-muted mb-1.5">Correo</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full rounded-lg border border-marca-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-marca-500"
+              autoFocus
+              className="w-full rounded-xl border border-borde bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
               placeholder="tucorreo@masvidaconsciente.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-marca-900 mb-1">Contraseña</label>
+            <label className="block text-xs font-medium text-fg-muted mb-1.5">Contraseña</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full rounded-lg border border-marca-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-marca-500"
+              className="w-full rounded-xl border border-borde bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
               placeholder="••••••••"
             />
           </div>
@@ -64,11 +72,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={cargando}
-            className="w-full rounded-lg bg-marca-600 text-white py-2.5 font-medium hover:bg-marca-700 transition disabled:opacity-50"
+            className="w-full rounded-xl bg-accent text-accent-fg py-2.5 text-sm font-medium hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50"
           >
-            {cargando ? "Ingresando..." : "Ingresar"}
+            {cargando ? "Ingresando…" : "Ingresar"}
           </button>
         </form>
+
+        <p className="text-center text-xs text-fg-muted/70 mt-8">
+          masvidaconsciente · Cabudare
+        </p>
       </div>
     </div>
   );

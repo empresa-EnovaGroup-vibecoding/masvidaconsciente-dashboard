@@ -2,7 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Neutrales zinc cálidos */
+  --bg: 0 0% 100%;
+  --bg-subtle: 240 5% 98%;
+  --fg: 240 10% 10%;
+  --fg-muted: 240 4% 46%;
+  --border: 240 6% 90%;
+  /* Acento verde sobrio (no protagonista) */
+  --accent: 152 40% 32%;
+  --accent-fg: 0 0% 100%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
 body {
-  background: #f7f9f7;
-  color: #163316;
+  background: hsl(var(--bg-subtle));
+  color: hsl(var(--fg));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Números alineados como en datos financieros */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

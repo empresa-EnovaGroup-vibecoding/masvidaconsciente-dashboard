@@ -5,17 +5,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        marca: {
-          50: "#f0f7f0",
-          100: "#dcecdc",
-          500: "#3d8b3d",
-          600: "#2f6e2f",
-          700: "#265826",
-          900: "#163316",
-        },
+        bg: "hsl(var(--bg))",
+        "bg-subtle": "hsl(var(--bg-subtle))",
+        fg: "hsl(var(--fg))",
+        "fg-muted": "hsl(var(--fg-muted))",
+        borde: "hsl(var(--border))",
+        accent: "hsl(var(--accent))",
+        "accent-fg": "hsl(var(--accent-fg))",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        sans: ["var(--font-geist)", "system-ui", "sans-serif"],
+      },
+      borderRadius: {
+        xl: "0.75rem",
+        "2xl": "1rem",
       },
     },
   },

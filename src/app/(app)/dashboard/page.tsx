@@ -13,29 +13,40 @@ export default function DashboardPage() {
   }, []);
 
   const tarjetas = [
-    { label: "Pedidos hoy", valor: m?.pedidos_hoy ?? "—", icon: ShoppingBag },
-    { label: "Ventas hoy", valor: m ? `$${m.ventas_hoy_usd.toFixed(2)}` : "—", icon: DollarSign },
-    { label: "Clientes", valor: m?.clientes_total ?? "—", icon: Users },
-    { label: "Pendientes", valor: m?.pedidos_pendientes ?? "—", icon: Clock },
+    { label: "Pedidos hoy", valor: m ? String(m.pedidos_hoy) : null, icon: ShoppingBag },
+    { label: "Ventas hoy", valor: m ? `$${m.ventas_hoy_usd.toFixed(2)}` : null, icon: DollarSign },
+    { label: "Clientes", valor: m ? String(m.clientes_total) : null, icon: Users },
+    { label: "Pendientes", valor: m ? String(m.pedidos_pendientes) : null, icon: Clock },
   ];
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-marca-900 mb-1">Resumen</h1>
-      <p className="text-marca-600 mb-6">Cómo va tu negocio hoy</p>
+      <header className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-fg">Resumen</h1>
+        <p className="text-sm text-fg-muted mt-1">Cómo va tu negocio hoy</p>
+      </header>
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {tarjetas.map(({ label, valor, icon: Icon }) => (
-          <div key={label} className="bg-white rounded-2xl border border-marca-100 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-marca-600">{label}</span>
-              <div className="h-9 w-9 rounded-lg bg-marca-50 flex items-center justify-center">
-                <Icon className="h-4 w-4 text-marca-600" />
-              </div>
+          <div
+            key={label}
+            className="group bg-bg rounded-2xl border border-borde p-5 shadow-sm hover:shadow-md hover:border-borde transition-all duration-200"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[13px] font-medium text-fg-muted">{label}</span>
+              <Icon className="h-4 w-4 text-fg-muted/60 group-hover:text-accent transition-colors" strokeWidth={1.8} />
             </div>
-            <p className="text-3xl font-semibold text-marca-900">{valor}</p>
+            {valor === null ? (
+              <div className="h-8 w-16 rounded-md bg-bg-subtle animate-pulse" />
+            ) : (
+              <p className="text-[28px] leading-none font-semibold tracking-tight text-fg tnum">{valor}</p>
+            )}
           </div>
         ))}
       </div>

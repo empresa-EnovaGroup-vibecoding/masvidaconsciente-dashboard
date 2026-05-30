@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MessageCircle } from "lucide-react";
 import { getConversaciones, getMensajes, type Conversacion, type Mensaje } from "@/lib/api";
 
 export default function ConversacionesPage() {
-  const [convs, setConvs] = useState<Conversacion[]>([]);
+  const [convs, setConvs] = useState<Conversacion[] | null>(null);
   const [activa, setActiva] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [error, setError] = useState("");
@@ -20,40 +21,58 @@ export default function ConversacionesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-marca-900 mb-1">Conversaciones</h1>
-      <p className="text-marca-600 mb-6">Los chats de WhatsApp con tus clientes</p>
+      <header className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-fg">Conversaciones</h1>
+        <p className="text-sm text-fg-muted mt-1">Los chats de WhatsApp con tus clientes</p>
+      </header>
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-      {convs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-marca-100 p-10 text-center text-marca-600">
-          Aún no hay conversaciones. Aparecerán cuando los clientes escriban por WhatsApp.
+      {convs === null ? (
+        <div className="h-64 rounded-2xl bg-bg border border-borde animate-pulse" />
+      ) : convs.length === 0 ? (
+        <div className="rounded-2xl border border-borde bg-bg p-12 text-center">
+          <div className="mx-auto h-11 w-11 rounded-2xl bg-bg-subtle flex items-center justify-center mb-4">
+            <MessageCircle className="h-5 w-5 text-fg-muted/60" strokeWidth={1.8} />
+          </div>
+          <p className="text-sm font-medium text-fg">Aún no hay conversaciones</p>
+          <p className="text-sm text-fg-muted mt-1">
+            Aparecerán cuando los clientes escriban por WhatsApp.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {convs.map((c) => (
               <button
                 key={c.telefono}
                 onClick={() => abrir(c.telefono)}
-                className={`w-full text-left bg-white rounded-xl border p-3 transition ${
-                  activa === c.telefono ? "border-marca-500" : "border-marca-100 hover:border-marca-300"
+                className={`w-full text-left rounded-xl border p-3 transition-all duration-200 ${
+                  activa === c.telefono
+                    ? "border-accent bg-bg shadow-sm"
+                    : "border-borde bg-bg hover:border-fg-muted/30"
                 }`}
               >
-                <p className="font-medium text-marca-900">{c.nombre || c.telefono}</p>
-                <p className="text-sm text-marca-600 truncate">{c.ultimo_mensaje || "—"}</p>
+                <p className="text-sm font-medium text-fg truncate">{c.nombre || c.telefono}</p>
+                <p className="text-[13px] text-fg-muted truncate mt-0.5">{c.ultimo_mensaje || "—"}</p>
               </button>
             ))}
           </div>
 
-          <div className="md:col-span-2 bg-white rounded-2xl border border-marca-100 p-5 min-h-[400px]">
+          <div className="md:col-span-2 bg-bg rounded-2xl border border-borde p-5 min-h-[420px]">
             {activa ? (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {mensajes.map((m, i) => (
                   <div key={i} className={`flex ${m.rol === "assistant" ? "justify-end" : "justify-start"}`}>
                     <div
-                      className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                        m.rol === "assistant" ? "bg-marca-600 text-white" : "bg-marca-50 text-marca-900"
+                      className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
+                        m.rol === "assistant"
+                          ? "bg-accent text-accent-fg rounded-br-md"
+                          : "bg-bg-subtle text-fg rounded-bl-md"
                       }`}
                     >
                       {m.contenido}
@@ -62,7 +81,9 @@ export default function ConversacionesPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-marca-600 text-center mt-20">Elige una conversación para verla</p>
+              <div className="h-full flex items-center justify-center">
+                <p className="text-sm text-fg-muted">Elige una conversación para verla</p>
+              </div>
             )}
           </div>
         </div>
