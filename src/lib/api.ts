@@ -102,6 +102,24 @@ export interface Mensaje {
   fecha: string;
 }
 
+export type EstadoPago = "reportado" | "confirmado" | "rechazado";
+
+export interface Pago {
+  id: number;
+  pedido_id: number;
+  cliente: string | null;
+  items: ItemPedido[] | null;
+  estado: EstadoPago;
+  metodo: string;
+  monto_usd: number | null;
+  monto_bs: number | null;
+  tasa_usada: number | null;
+  referencia: string | null;
+  tiene_comprobante: boolean;
+  confirmado_por: string | null;
+  fecha: string;
+}
+
 // ─── Endpoints ───────────────────────────────────────────────────────
 
 export const getMetricas = () => request<Metricas>("/api/metricas");
@@ -112,3 +130,28 @@ export const getProductos = () => request<Producto[]>("/api/productos");
 export const getConversaciones = () => request<Conversacion[]>("/api/conversaciones");
 export const getMensajes = (telefono: string) =>
   request<Mensaje[]>(`/api/conversaciones/${telefono}`);
+
+export const getPagos = (estado?: string) =>
+  request<Pago[]>(`/api/pagos${estado ? `?estado=${estado}` : ""}`);
+export const confirmarPago = (id: number) =>
+  request(`/api/pagos/${id}/confirmar`, { method: "POST" });
+export const rechazarPago = (id: number, motivo?: string) =>
+  request(`/api/pagos/${id}/rechazar`, {
+    method: "POST",
+    body: JSON.stringify({ motivo: motivo ?? null }),
+  });
+
+/**
+ * Descarga el comprobante (imagen/PDF) como blob usando el token Bearer y
+ * devuelve un objectURL. Un <img src> directo NO sirve porque no manda el
+ * header Authorization, y el comprobante es privado (trae datos bancarios).
+ */
+export async function getComprobanteUrl(pagoId: number): Promise<string> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/api/pagos/${pagoId}/comprobante`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("No se pudo cargar el comprobante");
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}

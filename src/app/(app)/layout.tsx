@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, ShoppingBag, BookOpen, MessageCircle, LogOut } from "lucide-react";
-import { clearToken, isLoggedIn } from "@/lib/api";
+import { LayoutGrid, ShoppingBag, Wallet, BookOpen, MessageCircle, LogOut } from "lucide-react";
+import { clearToken, isLoggedIn, getPagos } from "@/lib/api";
 
 const NAV = [
   { href: "/dashboard", label: "Resumen", icon: LayoutGrid },
   { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
+  { href: "/pagos", label: "Pagos", icon: Wallet },
   { href: "/catalogo", label: "Catálogo", icon: BookOpen },
   { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
 ];
@@ -17,11 +18,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [listo, setListo] = useState(false);
+  const [pendientes, setPendientes] = useState(0);
 
   useEffect(() => {
     if (!isLoggedIn()) router.replace("/login");
     else setListo(true);
   }, [router]);
+
+  useEffect(() => {
+    if (!listo) return;
+    getPagos("reportado")
+      .then((p) => setPendientes(p.length))
+      .catch(() => {});
+  }, [listo, pathname]);
 
   if (!listo) return null;
 
@@ -62,7 +71,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <Icon className={`h-[18px] w-[18px] ${activo ? "text-accent" : ""}`} strokeWidth={1.8} />
-                {label}
+                <span className="flex-1">{label}</span>
+                {label === "Pagos" && pendientes > 0 && (
+                  <span className="text-[11px] font-semibold rounded-full bg-accent text-white px-1.5 py-0.5 min-w-[18px] text-center tnum">
+                    {pendientes}
+                  </span>
+                )}
               </Link>
             );
           })}
