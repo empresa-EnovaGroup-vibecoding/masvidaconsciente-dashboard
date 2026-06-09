@@ -10,13 +10,35 @@ export default function ConversacionesPage() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [error, setError] = useState("");
 
+  // Auto-refresco de la lista de conversaciones, casi en tiempo real (cada 7s).
   useEffect(() => {
-    getConversaciones().then(setConvs).catch((e) => setError(e.message));
+    let activo = true;
+    const cargar = () => {
+      getConversaciones()
+        .then((c) => { if (activo) setConvs(c); })
+        .catch((e) => { if (activo) setError(e.message); });
+    };
+    cargar();
+    const id = setInterval(cargar, 7000);
+    return () => { activo = false; clearInterval(id); };
   }, []);
+
+  // Auto-refresco de los mensajes de la conversacion ABIERTA: verla responder en vivo.
+  useEffect(() => {
+    if (!activa) return;
+    let activo = true;
+    const cargar = () => {
+      getMensajes(activa)
+        .then((m) => { if (activo) setMensajes(m); })
+        .catch(() => {});
+    };
+    cargar();
+    const id = setInterval(cargar, 7000);
+    return () => { activo = false; clearInterval(id); };
+  }, [activa]);
 
   function abrir(telefono: string) {
     setActiva(telefono);
-    getMensajes(telefono).then(setMensajes).catch((e) => setError(e.message));
   }
 
   return (
