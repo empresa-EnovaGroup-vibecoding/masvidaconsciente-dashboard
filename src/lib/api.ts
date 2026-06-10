@@ -144,6 +144,14 @@ export interface Reporte {
   mes: ReportePeriodo;
 }
 
+export interface EstadoTasa {
+  bcv_base: number | null;
+  margen_pct: number;
+  manual_valor: number | null;
+  manual_activa: boolean;
+  tasa_efectiva: number | null;
+}
+
 export type ProductoInput = Omit<Producto, "id">;
 
 // ─── Endpoints ───────────────────────────────────────────────────────
@@ -153,6 +161,12 @@ export const getReporte = () => request<Reporte>("/api/reporte");
 export const getConfiguracion = () => request<ConfiguracionNegocio>("/api/configuracion");
 export const guardarConfiguracion = (valores: Partial<ConfiguracionNegocio>) =>
   request("/api/configuracion", { method: "PUT", body: JSON.stringify({ valores }) });
+export const getTasa = () => request<EstadoTasa>("/api/tasa");
+export const guardarTasa = (datos: {
+  margen_pct?: number;
+  manual_valor?: number;
+  manual_activa?: boolean;
+}) => request("/api/tasa", { method: "PUT", body: JSON.stringify(datos) });
 export const getPedidos = () => request<Pedido[]>("/api/pedidos");
 export const cambiarEstadoPedido = (id: number, estado: string) =>
   request(`/api/pedidos/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
