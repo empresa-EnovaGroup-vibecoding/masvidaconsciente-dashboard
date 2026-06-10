@@ -198,6 +198,12 @@ export type ConocimientoInput = Omit<Conocimiento, "id">;
 
 export type ProductoInput = Omit<Producto, "id">;
 
+export interface GuiasMensajes {
+  msg_guia_confirmado: string;
+  msg_guia_rechazado: string;
+  msg_guia_comprobante: string;
+}
+
 // ─── Endpoints ───────────────────────────────────────────────────────
 
 export const getMetricas = () => request<Metricas>("/api/metricas");
@@ -241,6 +247,9 @@ export const guardarBotEstado = (activo: boolean) =>
     method: "PUT",
     body: JSON.stringify({ activo }),
   });
+export const getGuiasMensajes = () => request<GuiasMensajes>("/api/mensajes");
+export const guardarGuiasMensajes = (valores: Partial<GuiasMensajes>) =>
+  request("/api/mensajes", { method: "PUT", body: JSON.stringify({ valores }) });
 export const getConocimiento = () => request<Conocimiento[]>("/api/conocimiento");
 export const crearConocimiento = (data: ConocimientoInput) =>
   request<{ id: number }>("/api/conocimiento", { method: "POST", body: JSON.stringify(data) });
