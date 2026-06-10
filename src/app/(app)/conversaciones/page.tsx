@@ -1,14 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageCircle } from "lucide-react";
-import { getConversaciones, getMensajes, type Conversacion, type Mensaje } from "@/lib/api";
+import { MessageCircle, Bot } from "lucide-react";
+import {
+  getConversaciones,
+  getMensajes,
+  pausarBotCliente,
+  type Conversacion,
+  type Mensaje,
+} from "@/lib/api";
 
 export default function ConversacionesPage() {
   const [convs, setConvs] = useState<Conversacion[] | null>(null);
   const [activa, setActiva] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [error, setError] = useState("");
+  const [cambiandoPausa, setCambiandoPausa] = useState(false);
 
   // Auto-refresco de la lista de conversaciones, casi en tiempo real (cada 7s).
   useEffect(() => {
@@ -39,6 +46,21 @@ export default function ConversacionesPage() {
 
   function abrir(telefono: string) {
     setActiva(telefono);
+  }
+
+  const convActiva = convs?.find((c) => c.telefono === activa) ?? null;
+
+  async function togglePausa() {
+    if (!activa || !convActiva) return;
+    setCambiandoPausa(true);
+    try {
+      await pausarBotCliente(activa, !convActiva.bot_pausado);
+      setConvs(await getConversaciones());
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setCambiandoPausa(false);
+    }
   }
 
   return (
@@ -87,20 +109,51 @@ export default function ConversacionesPage() {
 
           <div className="md:col-span-2 bg-bg rounded-2xl border border-borde p-5 min-h-[420px]">
             {activa ? (
-              <div className="space-y-2.5">
-                {mensajes.map((m, i) => (
-                  <div key={i} className={`flex ${m.rol === "assistant" ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
-                        m.rol === "assistant"
-                          ? "bg-accent text-accent-fg rounded-br-md"
-                          : "bg-bg-subtle text-fg rounded-bl-md"
-                      }`}
-                    >
-                      {m.contenido}
-                    </div>
+              <div>
+                <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-borde">
+                  <p className="text-[13px] font-medium text-fg truncate">
+                    {convActiva?.nombre || activa}
+                  </p>
+                  <button
+                    onClick={togglePausa}
+                    disabled={cambiandoPausa}
+                    className={`shrink-0 inline-flex items-center gap-1.5 text-[12px] font-medium rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 ${
+                      convActiva?.bot_pausado
+                        ? "bg-accent text-white hover:opacity-90"
+                        : "border border-borde text-fg-muted hover:bg-bg-subtle"
+                    }`}
+                  >
+                    <Bot className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    {cambiandoPausa
+                      ? "…"
+                      : convActiva?.bot_pausado
+                        ? "Reactivar bot aquí"
+                        : "Pausar bot aquí"}
+                  </button>
+                </div>
+
+                {convActiva?.bot_pausado && (
+                  <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[12px] text-amber-800">
+                    El bot está <span className="font-medium">pausado en este chat</span> — respondes tú. Los
+                    demás clientes siguen siendo atendidos.
                   </div>
-                ))}
+                )}
+
+                <div className="space-y-2.5">
+                  {mensajes.map((m, i) => (
+                    <div key={i} className={`flex ${m.rol === "assistant" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
+                          m.rol === "assistant"
+                            ? "bg-accent text-accent-fg rounded-br-md"
+                            : "bg-bg-subtle text-fg rounded-bl-md"
+                        }`}
+                      >
+                        {m.contenido}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="h-full flex items-center justify-center">

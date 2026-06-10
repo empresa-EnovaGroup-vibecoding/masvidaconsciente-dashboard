@@ -94,6 +94,7 @@ export interface Conversacion {
   nombre: string | null;
   ultimo_mensaje: string | null;
   ultima_interaccion: string;
+  bot_pausado: boolean;
 }
 
 export interface Mensaje {
@@ -228,6 +229,11 @@ export const guardarNotasCliente = (telefono: string, notas: string) =>
   request(`/api/clientes/${encodeURIComponent(telefono)}/notas`, {
     method: "PUT",
     body: JSON.stringify({ notas }),
+  });
+export const pausarBotCliente = (telefono: string, pausado: boolean) =>
+  request(`/api/clientes/${encodeURIComponent(telefono)}/pausa`, {
+    method: "PUT",
+    body: JSON.stringify({ pausado }),
   });
 export const getBotEstado = () => request<{ activo: boolean }>("/api/bot-estado");
 export const guardarBotEstado = (activo: boolean) =>
