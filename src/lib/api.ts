@@ -158,6 +158,34 @@ export interface Personalidad {
   default: string;
 }
 
+export interface ClienteResumen {
+  telefono: string;
+  nombre: string | null;
+  num_pedidos: number;
+  total_gastado_usd: number;
+  ultima_compra: string | null;
+  ultima_interaccion: string;
+}
+
+export interface PedidoCliente {
+  id: number;
+  estado: string;
+  items: ItemPedido[];
+  total_usd: number;
+  fecha: string;
+}
+
+export interface ClienteDetalle {
+  telefono: string;
+  nombre: string | null;
+  notas: string | null;
+  primera_interaccion: string;
+  ultima_interaccion: string;
+  total_gastado_usd: number;
+  num_pedidos: number;
+  pedidos: PedidoCliente[];
+}
+
 export type ProductoInput = Omit<Producto, "id">;
 
 // ─── Endpoints ───────────────────────────────────────────────────────
@@ -183,6 +211,14 @@ export const probarBot = (
   request<{ respuesta: string }>("/api/probar", {
     method: "POST",
     body: JSON.stringify({ mensaje, historial }),
+  });
+export const getClientes = () => request<ClienteResumen[]>("/api/clientes");
+export const getCliente = (telefono: string) =>
+  request<ClienteDetalle>(`/api/clientes/${encodeURIComponent(telefono)}`);
+export const guardarNotasCliente = (telefono: string, notas: string) =>
+  request(`/api/clientes/${encodeURIComponent(telefono)}/notas`, {
+    method: "PUT",
+    body: JSON.stringify({ notas }),
   });
 export const getPedidos = () => request<Pedido[]>("/api/pedidos");
 export const cambiarEstadoPedido = (id: number, estado: string) =>
