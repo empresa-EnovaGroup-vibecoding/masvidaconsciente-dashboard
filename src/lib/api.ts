@@ -153,6 +153,11 @@ export interface EstadoTasa {
   tasa_efectiva: number | null;
 }
 
+export interface Personalidad {
+  personalidad: string;
+  default: string;
+}
+
 export type ProductoInput = Omit<Producto, "id">;
 
 // ─── Endpoints ───────────────────────────────────────────────────────
@@ -168,6 +173,17 @@ export const guardarTasa = (datos: {
   manual_valor?: number;
   manual_activa?: boolean;
 }) => request("/api/tasa", { method: "PUT", body: JSON.stringify(datos) });
+export const getPersonalidad = () => request<Personalidad>("/api/personalidad");
+export const guardarPersonalidad = (personalidad: string) =>
+  request("/api/personalidad", { method: "PUT", body: JSON.stringify({ personalidad }) });
+export const probarBot = (
+  mensaje: string,
+  historial: { role: string; content: string }[],
+) =>
+  request<{ respuesta: string }>("/api/probar", {
+    method: "POST",
+    body: JSON.stringify({ mensaje, historial }),
+  });
 export const getPedidos = () => request<Pedido[]>("/api/pedidos");
 export const cambiarEstadoPedido = (id: number, estado: string) =>
   request(`/api/pedidos/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
