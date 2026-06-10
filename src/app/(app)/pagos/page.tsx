@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wallet, Check, X } from "lucide-react";
+import { Wallet, Check, X, Scale } from "lucide-react";
 import {
   getPagos,
   confirmarPago,
   rechazarPago,
+  verificarMonto,
   getComprobanteUrl,
   type Pago,
   type EstadoPago,
@@ -16,12 +17,14 @@ const COLOR: Record<EstadoPago, string> = {
   reportado: "bg-amber-50 text-amber-700 ring-amber-600/20",
   confirmado: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   rechazado: "bg-red-50 text-red-700 ring-red-600/20",
+  parcial: "bg-orange-50 text-orange-700 ring-orange-600/20",
 };
 
 const ETIQUETA: Record<EstadoPago, string> = {
   reportado: "Por verificar",
   confirmado: "Confirmado",
   rechazado: "Rechazado",
+  parcial: "Pago parcial",
 };
 
 /** Carga el comprobante como blob autenticado y lo muestra. Un <img src> directo
@@ -76,6 +79,8 @@ export default function PagosPage() {
   const [pagos, setPagos] = useState<Pago[] | null>(null);
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState<number | null>(null);
+  const [montoAbierto, setMontoAbierto] = useState<number | null>(null);
+  const [montoValor, setMontoValor] = useState("");
 
   function cargar() {
     getPagos().then(setPagos).catch((e) => setError(e.message));
@@ -104,6 +109,21 @@ export default function PagosPage() {
       cargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo rechazar");
+    } finally {
+      setEnviando(null);
+    }
+  }
+
+  async function registrarMonto(id: number) {
+    setError("");
+    setEnviando(id);
+    try {
+      await verificarMonto(id, Number(montoValor));
+      setMontoAbierto(null);
+      setMontoValor("");
+      cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo registrar el monto");
     } finally {
       setEnviando(null);
     }
@@ -180,28 +200,80 @@ export default function PagosPage() {
               </div>
 
               {p.estado === "reportado" ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => confirmar(p.id)}
-                    disabled={enviando === p.id}
-                    className="flex items-center gap-1.5 text-[13px] font-medium rounded-lg bg-accent text-white px-3.5 py-2 hover:opacity-90 disabled:opacity-50 transition"
-                  >
-                    <Check className="h-4 w-4" strokeWidth={2} />
-                    {enviando === p.id ? "Confirmando…" : "Confirmar pago"}
-                  </button>
-                  <button
-                    onClick={() => rechazar(p.id)}
-                    disabled={enviando === p.id}
-                    className="flex items-center gap-1.5 text-[13px] font-medium rounded-lg border border-borde text-fg-muted px-3.5 py-2 hover:bg-bg-subtle disabled:opacity-50 transition"
-                  >
-                    <X className="h-4 w-4" strokeWidth={2} />
-                    Rechazar
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => confirmar(p.id)}
+                      disabled={enviando === p.id}
+                      className="flex items-center gap-1.5 text-[13px] font-medium rounded-lg bg-accent text-white px-3.5 py-2 hover:opacity-90 disabled:opacity-50 transition"
+                    >
+                      <Check className="h-4 w-4" strokeWidth={2} />
+                      {enviando === p.id ? "Confirmando…" : "Confirmar pago"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMontoAbierto(montoAbierto === p.id ? null : p.id);
+                        setMontoValor("");
+                      }}
+                      disabled={enviando === p.id}
+                      className="flex items-center gap-1.5 text-[13px] font-medium rounded-lg border border-borde text-fg px-3.5 py-2 hover:bg-bg-subtle disabled:opacity-50 transition"
+                    >
+                      <Scale className="h-4 w-4" strokeWidth={2} />
+                      Monto distinto
+                    </button>
+                    <button
+                      onClick={() => rechazar(p.id)}
+                      disabled={enviando === p.id}
+                      className="flex items-center gap-1.5 text-[13px] font-medium rounded-lg border border-borde text-fg-muted px-3.5 py-2 hover:bg-bg-subtle disabled:opacity-50 transition"
+                    >
+                      <X className="h-4 w-4" strokeWidth={2} />
+                      Rechazar
+                    </button>
+                  </div>
+
+                  {montoAbierto === p.id && (
+                    <div className="flex items-center gap-2 flex-wrap rounded-xl border border-borde bg-bg-subtle/50 p-3">
+                      <span className="text-[13px] text-fg-muted">¿Cuánto recibiste? Bs</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        autoFocus
+                        value={montoValor}
+                        onChange={(e) => setMontoValor(e.target.value)}
+                        placeholder={p.monto_bs ? String(p.monto_bs) : "0.00"}
+                        className="w-32 rounded-lg border border-borde bg-bg px-3 py-1.5 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                      />
+                      <button
+                        onClick={() => registrarMonto(p.id)}
+                        disabled={enviando === p.id || montoValor.trim() === ""}
+                        className="text-[13px] font-medium rounded-lg bg-accent text-white px-3.5 py-1.5 hover:opacity-90 disabled:opacity-50 transition"
+                      >
+                        Registrar
+                      </button>
+                    </div>
+                  )}
                 </div>
+              ) : p.estado === "parcial" ? (
+                <p className="text-[12px] text-fg-muted">
+                  Recibido {formatBs(p.monto_recibido)}
+                  {p.monto_bs !== null && p.monto_recibido !== null && (
+                    <span className="text-orange-700 font-medium">
+                      {" "}· faltan {formatBs(p.monto_bs - p.monto_recibido)}
+                    </span>
+                  )}
+                  {p.confirmado_por ? ` (${p.confirmado_por})` : ""}
+                </p>
               ) : (
                 <p className="text-[12px] text-fg-muted">
                   {p.estado === "confirmado" ? "Confirmado" : "Rechazado"}
                   {p.confirmado_por ? ` por ${p.confirmado_por}` : ""}
+                  {p.estado === "confirmado" &&
+                    p.monto_recibido !== null &&
+                    p.monto_bs !== null &&
+                    p.monto_recibido > p.monto_bs && (
+                      <span> · saldo a favor {formatBs(p.monto_recibido - p.monto_bs)}</span>
+                    )}
                 </p>
               )}
             </div>

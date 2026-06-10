@@ -102,7 +102,7 @@ export interface Mensaje {
   fecha: string;
 }
 
-export type EstadoPago = "reportado" | "confirmado" | "rechazado";
+export type EstadoPago = "reportado" | "confirmado" | "rechazado" | "parcial";
 
 export interface Pago {
   id: number;
@@ -113,6 +113,7 @@ export interface Pago {
   metodo: string;
   monto_usd: number | null;
   monto_bs: number | null;
+  monto_recibido: number | null;
   tasa_usada: number | null;
   referencia: string | null;
   tiene_comprobante: boolean;
@@ -187,6 +188,11 @@ export const rechazarPago = (id: number, motivo?: string) =>
   request(`/api/pagos/${id}/rechazar`, {
     method: "POST",
     body: JSON.stringify({ motivo: motivo ?? null }),
+  });
+export const verificarMonto = (id: number, monto_recibido: number) =>
+  request(`/api/pagos/${id}/verificar-monto`, {
+    method: "POST",
+    body: JSON.stringify({ monto_recibido }),
   });
 
 /**
