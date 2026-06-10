@@ -120,13 +120,47 @@ export interface Pago {
   fecha: string;
 }
 
+export interface ConfiguracionNegocio {
+  negocio_nombre: string | null;
+  negocio_ubicacion: string | null;
+  negocio_pago: string | null;
+  negocio_instagram: string | null;
+  pago_movil_banco: string | null;
+  pago_movil_cedula: string | null;
+  pago_movil_telefono: string | null;
+  pago_movil_titular: string | null;
+  dueno_telefono: string | null;
+}
+
+export interface ReportePeriodo {
+  ventas_usd: number;
+  num_ventas: number;
+  pedidos: number;
+}
+
+export interface Reporte {
+  hoy: ReportePeriodo;
+  semana: ReportePeriodo;
+  mes: ReportePeriodo;
+}
+
+export type ProductoInput = Omit<Producto, "id">;
+
 // ─── Endpoints ───────────────────────────────────────────────────────
 
 export const getMetricas = () => request<Metricas>("/api/metricas");
+export const getReporte = () => request<Reporte>("/api/reporte");
+export const getConfiguracion = () => request<ConfiguracionNegocio>("/api/configuracion");
+export const guardarConfiguracion = (valores: Partial<ConfiguracionNegocio>) =>
+  request("/api/configuracion", { method: "PUT", body: JSON.stringify({ valores }) });
 export const getPedidos = () => request<Pedido[]>("/api/pedidos");
 export const cambiarEstadoPedido = (id: number, estado: string) =>
   request(`/api/pedidos/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
 export const getProductos = () => request<Producto[]>("/api/productos");
+export const crearProducto = (data: ProductoInput) =>
+  request<{ id: number }>("/api/productos", { method: "POST", body: JSON.stringify(data) });
+export const editarProducto = (id: number, data: ProductoInput) =>
+  request(`/api/productos/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 export const getConversaciones = () => request<Conversacion[]>("/api/conversaciones");
 export const getMensajes = (telefono: string) =>
   request<Mensaje[]>(`/api/conversaciones/${telefono}`);

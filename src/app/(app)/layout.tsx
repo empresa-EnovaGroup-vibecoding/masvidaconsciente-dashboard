@@ -3,15 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, ShoppingBag, Wallet, BookOpen, MessageCircle, LogOut } from "lucide-react";
+import { LayoutGrid, BarChart3, ShoppingBag, Wallet, BookOpen, MessageCircle, Settings, LogOut } from "lucide-react";
 import { clearToken, isLoggedIn, getPagos } from "@/lib/api";
 
 const NAV = [
   { href: "/dashboard", label: "Resumen", icon: LayoutGrid },
+  { href: "/reporte", label: "Reporte", icon: BarChart3 },
   { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
   { href: "/pagos", label: "Pagos", icon: Wallet },
   { href: "/catalogo", label: "Catálogo", icon: BookOpen },
   { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
+  { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
