@@ -265,6 +265,22 @@ export const crearProducto = (data: ProductoInput) =>
   request<{ id: number }>("/api/productos", { method: "POST", body: JSON.stringify(data) });
 export const editarProducto = (id: number, data: ProductoInput) =>
   request(`/api/productos/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export const getCatalogoPdf = () => request<{ tiene: boolean }>("/api/catalogo-pdf");
+export async function subirCatalogoPdf(file: File): Promise<void> {
+  const token = getToken();
+  const fd = new FormData();
+  fd.append("archivo", file);
+  const res = await fetch(`${API_URL}/api/catalogo-pdf`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Error" }));
+    throw new Error(err.detail || "No se pudo subir el catálogo");
+  }
+}
+export const borrarCatalogoPdf = () => request("/api/catalogo-pdf", { method: "DELETE" });
 export const getConversaciones = () => request<Conversacion[]>("/api/conversaciones");
 export const getMensajes = (telefono: string) =>
   request<Mensaje[]>(`/api/conversaciones/${telefono}`);

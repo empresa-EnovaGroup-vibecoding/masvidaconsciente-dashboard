@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, X } from "lucide-react";
+import { Plus, Pencil, X, FileText, Upload, Trash2 } from "lucide-react";
 import {
   getProductos,
   crearProducto,
   editarProducto,
+  getCatalogoPdf,
+  subirCatalogoPdf,
+  borrarCatalogoPdf,
   type Producto,
   type ProductoInput,
 } from "@/lib/api";
@@ -44,6 +47,8 @@ export default function CatalogoPage() {
   const [form, setForm] = useState<FormState | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [ocupado, setOcupado] = useState<number | null>(null);
+  const [pdfTiene, setPdfTiene] = useState<boolean | null>(null);
+  const [pdfOcupado, setPdfOcupado] = useState(false);
 
   function recargar() {
     getProductos().then(setProductos).catch((e) => setError(e.message));
@@ -51,7 +56,39 @@ export default function CatalogoPage() {
 
   useEffect(() => {
     recargar();
+    getCatalogoPdf()
+      .then((r) => setPdfTiene(r.tiene))
+      .catch(() => setPdfTiene(false));
   }, []);
+
+  async function onPdfSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPdfOcupado(true);
+    setError("");
+    try {
+      await subirCatalogoPdf(file);
+      setPdfTiene(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setPdfOcupado(false);
+    }
+  }
+
+  async function quitarPdf() {
+    if (!window.confirm("¿Quitar el catálogo PDF? El bot dejará de poder enviarlo.")) return;
+    setPdfOcupado(true);
+    try {
+      await borrarCatalogoPdf();
+      setPdfTiene(false);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setPdfOcupado(false);
+    }
+  }
 
   const rank = (c: string) => {
     const i = ORDEN.indexOf(c);
@@ -139,6 +176,52 @@ export default function CatalogoPage() {
           Nuevo producto
         </button>
       </header>
+
+      {/* Catálogo en PDF (el folleto que el bot envía) */}
+      <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-borde bg-bg p-4 shadow-sm">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-xl bg-bg-subtle flex items-center justify-center shrink-0">
+            <FileText className="h-5 w-5 text-fg-muted" strokeWidth={1.8} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-fg">Catálogo en PDF</p>
+            <p className="text-[12px] text-fg-muted">
+              {pdfTiene === null
+                ? "…"
+                : pdfTiene
+                  ? "Cargado. El bot lo envía cuando un cliente pide ver el catálogo."
+                  : "Sube tu folleto en PDF y el bot lo enviará cuando se lo pidan."}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <label
+            className={`inline-flex items-center gap-1.5 text-[13px] font-medium rounded-lg px-3.5 py-2 cursor-pointer bg-accent text-white hover:opacity-90 transition-opacity ${
+              pdfOcupado ? "opacity-50 pointer-events-none" : ""
+            }`}
+          >
+            <Upload className="h-4 w-4" strokeWidth={2} />
+            {pdfOcupado ? "Subiendo…" : pdfTiene ? "Reemplazar" : "Subir PDF"}
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={onPdfSelect}
+              disabled={pdfOcupado}
+            />
+          </label>
+          {pdfTiene && (
+            <button
+              onClick={quitarPdf}
+              disabled={pdfOcupado}
+              className="p-2 rounded-lg text-fg-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+              title="Quitar"
+            >
+              <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+            </button>
+          )}
+        </div>
+      </div>
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
