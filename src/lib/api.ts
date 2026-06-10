@@ -186,6 +186,15 @@ export interface ClienteDetalle {
   pedidos: PedidoCliente[];
 }
 
+export interface Conocimiento {
+  id: number;
+  categoria: string | null;
+  titulo: string;
+  contenido: string;
+}
+
+export type ConocimientoInput = Omit<Conocimiento, "id">;
+
 export type ProductoInput = Omit<Producto, "id">;
 
 // ─── Endpoints ───────────────────────────────────────────────────────
@@ -220,6 +229,13 @@ export const guardarNotasCliente = (telefono: string, notas: string) =>
     method: "PUT",
     body: JSON.stringify({ notas }),
   });
+export const getConocimiento = () => request<Conocimiento[]>("/api/conocimiento");
+export const crearConocimiento = (data: ConocimientoInput) =>
+  request<{ id: number }>("/api/conocimiento", { method: "POST", body: JSON.stringify(data) });
+export const editarConocimiento = (id: number, data: ConocimientoInput) =>
+  request(`/api/conocimiento/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export const borrarConocimiento = (id: number) =>
+  request(`/api/conocimiento/${id}`, { method: "DELETE" });
 export const getPedidos = () => request<Pedido[]>("/api/pedidos");
 export const cambiarEstadoPedido = (id: number, estado: string) =>
   request(`/api/pedidos/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, BarChart3, ShoppingBag, Wallet, Coins, BookOpen, Users, MessageCircle, Bot, Settings, LogOut } from "lucide-react";
+import { LayoutGrid, BarChart3, ShoppingBag, Wallet, Coins, BookOpen, Users, MessageCircle, Bot, Lightbulb, Settings, LogOut } from "lucide-react";
 import { clearToken, isLoggedIn, getPagos } from "@/lib/api";
 
 const NAV = [
@@ -16,6 +16,7 @@ const NAV = [
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
   { href: "/bot", label: "Mi Bot", icon: Bot },
+  { href: "/conocimiento", label: "Conocimiento", icon: Lightbulb },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
