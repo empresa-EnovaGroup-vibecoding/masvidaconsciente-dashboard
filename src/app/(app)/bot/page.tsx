@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Send, RotateCcw, Lock } from "lucide-react";
-import { getPersonalidad, guardarPersonalidad, probarBot } from "@/lib/api";
+import { Check, Send, RotateCcw, Lock, Power } from "lucide-react";
+import {
+  getPersonalidad,
+  guardarPersonalidad,
+  probarBot,
+  getBotEstado,
+  guardarBotEstado,
+} from "@/lib/api";
 
 type MsgSim = { rol: "user" | "assistant"; texto: string };
 
@@ -21,6 +27,10 @@ export default function BotPage() {
   const [errorS, setErrorS] = useState("");
   const finChat = useRef<HTMLDivElement>(null);
 
+  // Interruptor del bot
+  const [botActivo, setBotActivo] = useState<boolean | null>(null);
+  const [cambiando, setCambiando] = useState(false);
+
   useEffect(() => {
     getPersonalidad()
       .then((p) => {
@@ -28,7 +38,23 @@ export default function BotPage() {
         setOriginal(p.default);
       })
       .catch((e) => setErrorP(e.message));
+    getBotEstado()
+      .then((e) => setBotActivo(e.activo))
+      .catch(() => {});
   }, []);
+
+  async function toggleBot() {
+    if (botActivo === null) return;
+    setCambiando(true);
+    try {
+      const r = await guardarBotEstado(!botActivo);
+      setBotActivo(r.activo);
+    } catch (e) {
+      setErrorP((e as Error).message);
+    } finally {
+      setCambiando(false);
+    }
+  }
 
   useEffect(() => {
     finChat.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,6 +100,37 @@ export default function BotPage() {
           Ajusta cómo habla tu asistente y pruébalo en vivo, sin gastar WhatsApp.
         </p>
       </header>
+
+      {/* Interruptor del bot */}
+      <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-borde bg-bg p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${botActivo === false ? "bg-red-500" : "bg-green-500"}`}
+          />
+          <div>
+            <p className="text-sm font-medium text-fg">
+              {botActivo === null ? "Cargando…" : botActivo ? "Bot encendido" : "Bot apagado"}
+            </p>
+            <p className="text-[12px] text-fg-muted">
+              {botActivo === false
+                ? "No responde solo. Los mensajes te llegan para que respondas tú; los pagos siguen entrando."
+                : "Responde automáticamente a tus clientes por WhatsApp."}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={toggleBot}
+          disabled={cambiando || botActivo === null}
+          className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-50 ${
+            botActivo === false
+              ? "bg-accent text-white hover:opacity-90"
+              : "border border-borde text-fg hover:bg-bg-subtle"
+          }`}
+        >
+          <Power className="h-4 w-4" strokeWidth={2} />
+          {cambiando ? "…" : botActivo === false ? "Encender" : "Apagar"}
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── Personalidad ── */}

@@ -229,6 +229,12 @@ export const guardarNotasCliente = (telefono: string, notas: string) =>
     method: "PUT",
     body: JSON.stringify({ notas }),
   });
+export const getBotEstado = () => request<{ activo: boolean }>("/api/bot-estado");
+export const guardarBotEstado = (activo: boolean) =>
+  request<{ ok: boolean; activo: boolean }>("/api/bot-estado", {
+    method: "PUT",
+    body: JSON.stringify({ activo }),
+  });
 export const getConocimiento = () => request<Conocimiento[]>("/api/conocimiento");
 export const crearConocimiento = (data: ConocimientoInput) =>
   request<{ id: number }>("/api/conocimiento", { method: "POST", body: JSON.stringify(data) });
