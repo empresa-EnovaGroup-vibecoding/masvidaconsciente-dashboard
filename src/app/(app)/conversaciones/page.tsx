@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, Bot } from "lucide-react";
+import { MessageCircle, Bot, Trash2 } from "lucide-react";
 import {
   getConversaciones,
   getMensajes,
   pausarBotCliente,
+  borrarConversacion,
   type Conversacion,
   type Mensaje,
 } from "@/lib/api";
@@ -16,6 +17,7 @@ export default function ConversacionesPage() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [error, setError] = useState("");
   const [cambiandoPausa, setCambiandoPausa] = useState(false);
+  const [borrando, setBorrando] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLen = useRef(0);
 
@@ -73,6 +75,29 @@ export default function ConversacionesPage() {
       setError((e as Error).message);
     } finally {
       setCambiandoPausa(false);
+    }
+  }
+
+  async function borrarChat() {
+    if (!activa) return;
+    if (
+      !window.confirm(
+        "¿Borrar este chat? Se eliminan los mensajes y la memoria del bot para este cliente. Sus pedidos y pagos NO se borran. Esto no se puede deshacer.",
+      )
+    )
+      return;
+    setBorrando(true);
+    setError("");
+    try {
+      await borrarConversacion(activa);
+      setActiva(null);
+      setMensajes([]);
+      prevLen.current = 0;
+      setConvs(await getConversaciones());
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBorrando(false);
     }
   }
 
@@ -153,22 +178,33 @@ export default function ConversacionesPage() {
                       {convActiva?.nombre || activa}
                     </p>
                   </div>
-                  <button
-                    onClick={togglePausa}
-                    disabled={cambiandoPausa}
-                    className={`focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
-                      convActiva?.bot_pausado
-                        ? "bg-accent text-accent-fg hover:bg-accent-soft"
-                        : "bg-bg text-fg ring-1 ring-borde hover:bg-bg-subtle"
-                    }`}
-                  >
-                    <Bot className="h-4 w-4" strokeWidth={1.8} />
-                    {cambiandoPausa
-                      ? "…"
-                      : convActiva?.bot_pausado
-                        ? "Reactivar bot aquí"
-                        : "Pausar bot aquí"}
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={togglePausa}
+                      disabled={cambiandoPausa}
+                      className={`focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
+                        convActiva?.bot_pausado
+                          ? "bg-accent text-accent-fg hover:bg-accent-soft"
+                          : "bg-bg text-fg ring-1 ring-borde hover:bg-bg-subtle"
+                      }`}
+                    >
+                      <Bot className="h-4 w-4" strokeWidth={1.8} />
+                      {cambiandoPausa
+                        ? "…"
+                        : convActiva?.bot_pausado
+                          ? "Reactivar bot aquí"
+                          : "Pausar bot aquí"}
+                    </button>
+                    <button
+                      onClick={borrarChat}
+                      disabled={borrando}
+                      title="Borrar este chat"
+                      className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+                      {borrando ? "Borrando…" : "Borrar"}
+                    </button>
+                  </div>
                 </div>
 
                 {convActiva?.bot_pausado && (

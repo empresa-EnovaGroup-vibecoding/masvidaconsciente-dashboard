@@ -286,6 +286,8 @@ export const borrarCatalogoPdf = () => request("/api/catalogo-pdf", { method: "D
 export const getConversaciones = () => request<Conversacion[]>("/api/conversaciones");
 export const getMensajes = (telefono: string) =>
   request<Mensaje[]>(`/api/conversaciones/${telefono}`);
+export const borrarConversacion = (telefono: string) =>
+  request(`/api/conversaciones/${encodeURIComponent(telefono)}`, { method: "DELETE" });
 
 export const getPagos = (estado?: string) =>
   request<Pago[]>(`/api/pagos${estado ? `?estado=${estado}` : ""}`);

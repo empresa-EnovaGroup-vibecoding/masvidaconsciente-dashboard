@@ -260,7 +260,7 @@ export default function BotPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") enviar();
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) enviar();
               }}
               disabled={pensando}
               aria-label="Mensaje de prueba"

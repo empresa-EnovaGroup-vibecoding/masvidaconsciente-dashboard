@@ -30,7 +30,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[360px]">
         <div className="flex flex-col items-center mb-10">
           <div className="h-11 w-11 rounded-2xl bg-accent flex items-center justify-center mb-5">
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-white">
+            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-accent-fg">
               <path
                 d="M11 20A7 7 0 0 1 4 13c0-4 3-7 8-9 1 5-1 9-4 11"
                 stroke="currentColor"
@@ -53,7 +53,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
-              className="w-full rounded-xl border border-borde bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
+              className="focus-ring w-full rounded-xl ring-1 ring-borde bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-faint transition"
               placeholder="tucorreo@masvidaconsciente.com"
             />
           </div>
@@ -64,7 +64,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full rounded-xl border border-borde bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-muted/60 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
+              className="focus-ring w-full rounded-xl ring-1 ring-borde bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-faint transition"
               placeholder="••••••••"
             />
           </div>

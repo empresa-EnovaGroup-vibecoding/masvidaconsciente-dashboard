@@ -348,6 +348,9 @@ export default function CatalogoPage() {
                     value={form.categoria}
                     onChange={(e) => setForm({ ...form, categoria: e.target.value })}
                   >
+                    {!ORDEN.includes(form.categoria) && (
+                      <option value={form.categoria}>{TITULO[form.categoria] ?? form.categoria}</option>
+                    )}
                     {ORDEN.map((c) => (
                       <option key={c} value={c}>
                         {TITULO[c]}

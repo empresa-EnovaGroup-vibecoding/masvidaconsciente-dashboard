@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check, Lock, RefreshCw } from "lucide-react";
 import { getTasa, guardarTasa, type EstadoTasa } from "@/lib/api";
+import { formatBs } from "@/lib/format";
 
 export default function TasaPage() {
   const [estado, setEstado] = useState<EstadoTasa | null>(null);
@@ -46,8 +47,6 @@ export default function TasaPage() {
     }
   }
 
-  const fmt = (n: number | null) => (n === null ? "—" : n.toLocaleString("es-VE", { maximumFractionDigits: 2 }));
-
   return (
     <div>
       <header className="mb-7">
@@ -76,12 +75,12 @@ export default function TasaPage() {
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="mb-1 text-sm font-semibold text-fg-muted">Tasa que se cobra hoy</p>
-                <p className="text-4xl font-extrabold num-tight text-fg tnum">Bs {fmt(estado.tasa_efectiva)}</p>
+                <p className="text-4xl font-extrabold num-tight text-fg tnum">{formatBs(estado.tasa_efectiva)}</p>
                 <p className="mt-1.5 text-sm font-medium text-fg-muted">por cada $1</p>
               </div>
               <div className="text-right">
                 <p className="text-xs font-medium text-fg-muted">BCV de referencia</p>
-                <p className="text-base font-bold text-fg tnum">Bs {fmt(estado.bcv_base)}</p>
+                <p className="text-base font-bold text-fg tnum">{formatBs(estado.bcv_base)}</p>
                 {estado.manual_activa ? (
                   <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border">
                     <Lock className="h-3 w-3" strokeWidth={2} />
