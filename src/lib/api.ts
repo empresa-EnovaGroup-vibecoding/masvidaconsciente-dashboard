@@ -267,6 +267,8 @@ export const crearProducto = (data: ProductoInput) =>
   request<{ id: number }>("/api/productos", { method: "POST", body: JSON.stringify(data) });
 export const editarProducto = (id: number, data: ProductoInput) =>
   request(`/api/productos/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export const borrarProducto = (id: number) =>
+  request(`/api/productos/${id}`, { method: "DELETE" });
 export const getCatalogoPdf = () => request<{ tiene: boolean }>("/api/catalogo-pdf");
 export async function subirCatalogoPdf(file: File): Promise<void> {
   const token = getToken();

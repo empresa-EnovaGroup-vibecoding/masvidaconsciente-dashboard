@@ -9,6 +9,7 @@ import {
   getCatalogoPdf,
   subirCatalogoPdf,
   borrarCatalogoPdf,
+  borrarProducto,
   type Producto,
   type ProductoInput,
 } from "@/lib/api";
@@ -134,6 +135,25 @@ export default function CatalogoPage() {
       setProductos((prev) =>
         prev ? prev.map((x) => (x.id === p.id ? { ...x, disponible: !x.disponible } : x)) : prev,
       );
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  async function eliminar(p: Producto) {
+    if (
+      !window.confirm(
+        `¿Eliminar "${p.nombre}" del catálogo? Si solo quieres ocultarlo por ahora (y quizá venderlo después), usa "Agotado". Esto no afecta pedidos anteriores, pero no se puede deshacer.`,
+      )
+    )
+      return;
+    setOcupado(p.id);
+    setError("");
+    try {
+      await borrarProducto(p.id);
+      setProductos((prev) => (prev ? prev.filter((x) => x.id !== p.id) : prev));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -296,6 +316,15 @@ export default function CatalogoPage() {
                       >
                         <Pencil className="h-3.5 w-3.5" strokeWidth={1.8} />
                         Editar
+                      </button>
+                      <button
+                        onClick={() => eliminar(p)}
+                        disabled={ocupado === p.id}
+                        title="Eliminar producto"
+                        className="inline-flex items-center gap-1 text-[12px] font-medium text-red-600 transition hover:text-red-700 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+                        Eliminar
                       </button>
                     </div>
                   </div>
