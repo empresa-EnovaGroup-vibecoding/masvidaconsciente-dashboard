@@ -72,6 +72,7 @@ export interface ItemPedido {
 export interface Pedido {
   id: number;
   cliente: string;
+  nombre?: string | null;
   estado: string;
   items: ItemPedido[];
   total_usd: number;
@@ -262,6 +263,7 @@ export const borrarConocimiento = (id: number) =>
 export const getPedidos = () => request<Pedido[]>("/api/pedidos");
 export const cambiarEstadoPedido = (id: number, estado: string) =>
   request(`/api/pedidos/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
+export const borrarPedido = (id: number) => request(`/api/pedidos/${id}`, { method: "DELETE" });
 export const getProductos = () => request<Producto[]>("/api/productos");
 export const crearProducto = (data: ProductoInput) =>
   request<{ id: number }>("/api/productos", { method: "POST", body: JSON.stringify(data) });

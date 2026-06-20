@@ -31,7 +31,16 @@ export default function TasaPage() {
     cargar();
   }, []);
 
+  const manualNum = Number(manual);
+  const manualInvalido = manual.trim() === "" || !Number.isFinite(manualNum) || manualNum <= 0;
+  const bloqueoCandado = manualActiva && manualInvalido;
+
   async function guardar() {
+    if (manualActiva && manualInvalido) {
+      setError("Para activar el candado manual, pon un valor mayor que 0.");
+      setGuardado(false);
+      return;
+    }
     setGuardando(true);
     setError("");
     try {
@@ -158,12 +167,18 @@ export default function TasaPage() {
               />
               <span className="whitespace-nowrap text-sm font-medium text-fg-muted">/ $1</span>
             </div>
+
+            {bloqueoCandado && (
+              <p className="mt-2.5 text-sm font-semibold text-warn">
+                Para activar el candado manual, pon un valor mayor que 0.
+              </p>
+            )}
           </section>
 
           <div className="flex items-center gap-3">
             <button
               onClick={guardar}
-              disabled={guardando}
+              disabled={guardando || bloqueoCandado}
               className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar cambios"}
