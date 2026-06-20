@@ -55,7 +55,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const inicial = negocio.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen flex">
+    <div className="flex h-screen overflow-hidden">
       <aside className="w-64 shrink-0 border-r border-borde/70 bg-bg/95 backdrop-blur flex flex-col">
         <div className="flex items-center gap-3 px-5 pt-6 pb-5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent shadow-soft">
@@ -116,7 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-8 py-8">{children}</div>
       </main>
     </div>
