@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
-import { GeistSans } from "geist/font/sans";
+import { Nunito } from "next/font/google";
 import "./globals.css";
+
+const nunito = Nunito({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-nunito",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "masvidaconsciente — Panel",
@@ -9,8 +16,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={GeistSans.variable}>
-      <body style={{ fontFamily: "var(--font-geist), system-ui, sans-serif" }}>{children}</body>
+    <html lang="es" className={nunito.variable}>
+      <body style={{ fontFamily: "var(--font-nunito), system-ui, sans-serif" }}>{children}</body>
     </html>
   );
 }

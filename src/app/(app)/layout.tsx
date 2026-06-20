@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutGrid, BarChart3, ShoppingBag, Wallet, Coins, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut } from "lucide-react";
-import { clearToken, isLoggedIn, getPagos } from "@/lib/api";
+import { clearToken, isLoggedIn, getPagos, getConfiguracion, type ConfiguracionNegocio } from "@/lib/api";
 
 const NAV = [
   { href: "/dashboard", label: "Resumen", icon: LayoutGrid },
@@ -26,6 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [listo, setListo] = useState(false);
   const [pendientes, setPendientes] = useState(0);
+  const [config, setConfig] = useState<ConfiguracionNegocio | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn()) router.replace("/login");
@@ -37,6 +38,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     getPagos("reportado")
       .then((p) => setPendientes(p.length))
       .catch(() => {});
+    getConfiguracion()
+      .then(setConfig)
+      .catch(() => {});
   }, [listo, pathname]);
 
   if (!listo) return null;
@@ -46,41 +50,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     router.replace("/login");
   }
 
+  const negocio = config?.negocio_nombre?.trim() || "Mi negocio";
+  const ubicacion = config?.negocio_ubicacion?.trim() || "Panel";
+  const inicial = negocio.charAt(0).toUpperCase();
+
   return (
-    <div className="min-h-screen flex bg-bg-subtle">
-      <aside className="w-64 shrink-0 bg-bg border-r border-borde flex flex-col">
-        <div className="px-5 h-16 flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-xl bg-accent flex items-center justify-center">
-            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-white">
-              <path
-                d="M11 20A7 7 0 0 1 4 13c0-4 3-7 8-9 1 5-1 9-4 11"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+    <div className="min-h-screen flex">
+      <aside className="w-64 shrink-0 border-r border-borde/70 bg-bg/95 backdrop-blur flex flex-col">
+        <div className="flex items-center gap-3 px-5 pt-6 pb-5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent shadow-soft">
+            <svg viewBox="0 0 24 24" className="h-6 w-6 text-accent-fg" fill="currentColor" aria-hidden="true">
+              <path d="M5 19c0-7 5-12 14-13 0 9-5 14-12 14-1.6 0-2 0-2 0Z" />
+              <path d="M6 18.5C9.5 14 13 11.5 17 9.5" fill="none" stroke="hsl(152 45% 33%)" strokeWidth="1.3" strokeLinecap="round" />
             </svg>
           </div>
-          <span className="font-semibold tracking-tight text-fg text-[15px]">masvidaconsciente</span>
+          <div className="leading-tight">
+            <p className="font-extrabold text-[15px] num-snug text-fg">masvidaconsciente</p>
+            <p className="text-xs font-medium text-fg-muted">Panel de la dueña</p>
+          </div>
         </div>
 
-        <nav className="flex-1 px-3 py-2 space-y-0.5">
+        <nav aria-label="Navegación principal" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
           {NAV.map(({ href, label, icon: Icon }) => {
             const activo = pathname === href;
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
+                aria-current={activo ? "page" : undefined}
+                className={`focus-ring flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                   activo
-                    ? "bg-bg-subtle text-fg font-medium"
-                    : "text-fg-muted hover:text-fg hover:bg-bg-subtle/60"
+                    ? "bg-accent text-accent-fg font-semibold shadow-soft"
+                    : "text-fg-muted font-medium hover:bg-bg-subtle hover:text-fg"
                 }`}
               >
-                <Icon className={`h-[18px] w-[18px] ${activo ? "text-accent" : ""}`} strokeWidth={1.8} />
+                <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
                 <span className="flex-1">{label}</span>
                 {label === "Pagos" && pendientes > 0 && (
-                  <span className="text-[11px] font-semibold rounded-full bg-accent text-white px-1.5 py-0.5 min-w-[18px] text-center tnum">
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">
                     {pendientes}
                   </span>
                 )}
@@ -89,17 +96,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <button
-          onClick={salir}
-          className="m-3 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-fg-muted hover:text-fg hover:bg-bg-subtle/60 transition-colors duration-200"
-        >
-          <LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} />
-          Salir
-        </button>
+        <div className="border-t border-borde/70 p-3">
+          <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-sm font-semibold text-accent ring-1 ring-accent/15">
+              {inicial}
+            </div>
+            <div className="min-w-0 leading-tight">
+              <p className="truncate text-sm font-semibold text-fg">{negocio}</p>
+              <p className="truncate text-xs font-medium text-fg-muted">{ubicacion}</p>
+            </div>
+          </div>
+          <button
+            onClick={salir}
+            className="focus-ring mt-1 w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-fg-muted hover:bg-bg-subtle hover:text-fg transition-colors"
+          >
+            <LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} />
+            Salir
+          </button>
+        </div>
       </aside>
 
       <main className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto px-8 py-10">{children}</div>
+        <div className="max-w-6xl mx-auto px-8 py-8">{children}</div>
       </main>
     </div>
   );

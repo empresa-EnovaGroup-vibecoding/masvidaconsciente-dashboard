@@ -3,15 +3,21 @@
 @tailwind utilities;
 
 :root {
-  /* Neutrales zinc cálidos */
+  /* Neutrales con tono verde cálido (no gris frío) para armonía con la marca */
   --bg: 0 0% 100%;
-  --bg-subtle: 240 5% 98%;
-  --fg: 240 10% 10%;
-  --fg-muted: 240 4% 46%;
-  --border: 240 6% 90%;
-  /* Acento verde sobrio (no protagonista) */
-  --accent: 152 40% 32%;
+  --bg-subtle: 150 14% 97.5%;
+  --fg: 155 14% 14%;
+  --fg-muted: 155 7% 44%;
+  --fg-faint: 155 6% 46%;
+  --border: 150 12% 91%;
+  /* Acento verde de marca */
+  --accent: 152 45% 33%;
+  --accent-soft: 152 36% 40%;
   --accent-fg: 0 0% 100%;
+  /* Ámbar sobrio: reservado SOLO para "atención / pendiente" */
+  --warn: 34 42% 42%;
+  --warn-bg: 38 44% 97%;
+  --warn-border: 38 32% 87%;
 }
 
 * {
@@ -19,15 +25,73 @@
 }
 
 body {
-  background: hsl(var(--bg-subtle));
   color: hsl(var(--fg));
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* Fondo claro con tinte verde natural muy sutil */
+  background-color: hsl(150 22% 99%);
+  background-image:
+    radial-gradient(1100px 560px at 88% -12%, hsla(152, 45%, 33%, 0.035), transparent 62%),
+    radial-gradient(820px 460px at -4% 112%, hsla(152, 45%, 33%, 0.028), transparent 58%);
+  background-attachment: fixed;
 }
 
 /* Números alineados como en datos financieros */
 .tnum {
   font-variant-numeric: tabular-nums;
+}
+
+/* Tracking afinado para cifras grandes (look editorial / premium) */
+.num-tight {
+  letter-spacing: -0.025em;
+}
+.num-snug {
+  letter-spacing: -0.015em;
+}
+
+/* Hairline: anillo interno finísimo en vez de bordes duros */
+.ring-hair {
+  box-shadow: inset 0 0 0 1px hsla(155, 20%, 12%, 0.05);
+}
+
+/* Tarjeta con micro-elevación al pasar el mouse */
+.card {
+  transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card:hover {
+  box-shadow: 0 1px 2px rgba(20, 40, 30, 0.04), 0 18px 40px -24px rgba(20, 40, 30, 0.22);
+  transform: translateY(-1px);
+}
+
+/* Enlaces con micro-animación de separación */
+.lnk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: gap 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.lnk:hover {
+  gap: 0.5rem;
+}
+
+/* Foco accesible con halo verde */
+.focus-ring:focus-visible {
+  outline: 2px solid hsl(152 45% 38%);
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+}
+
+/* Scrollbar sobria */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(150 10% 88%);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(150 10% 82%);
 }
 
 @media (prefers-reduced-motion: reduce) {
