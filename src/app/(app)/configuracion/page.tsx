@@ -71,27 +71,27 @@ export default function ConfiguracionPage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Configuración del negocio</h1>
-        <p className="text-sm text-fg-muted mt-1">
+      <header className="mb-7">
+        <h1 className="text-[26px] font-extrabold num-tight text-fg">Configuración del negocio</h1>
+        <p className="mt-1 text-[15px] font-medium text-fg-muted">
           Los datos que el bot usa para atender y cobrar. Se aplican al instante.
         </p>
       </header>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
           {error}
         </div>
       )}
 
       {datos === null ? (
-        <div className="space-y-4">
+        <div className="max-w-2xl space-y-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-40 rounded-2xl bg-bg border border-borde animate-pulse" />
+            <div key={i} className="h-40 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : (
-        <div className="space-y-6 max-w-2xl">
+        <div className="max-w-2xl space-y-6">
           <Seccion titulo="Negocio">
             <Campo label="Nombre del negocio">
               <input className={inputCls} value={datos.negocio_nombre ?? ""}
@@ -102,7 +102,7 @@ export default function ConfiguracionPage() {
                 onChange={(e) => set("negocio_ubicacion", e.target.value)}
                 placeholder="Ej. Cabudare, Venezuela" />
             </Campo>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Campo label="Instagram">
                 <input className={inputCls} value={datos.negocio_instagram ?? ""}
                   onChange={(e) => set("negocio_instagram", e.target.value)}
@@ -117,7 +117,7 @@ export default function ConfiguracionPage() {
           </Seccion>
 
           <Seccion titulo="Datos de Pago Móvil" nota="Lo que el bot le envía al cliente para cobrar.">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Campo label="Banco">
                 <input className={inputCls} value={datos.pago_movil_banco ?? ""}
                   onChange={(e) => set("pago_movil_banco", e.target.value)} />
@@ -171,12 +171,12 @@ export default function ConfiguracionPage() {
             <button
               onClick={guardar}
               disabled={guardando}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent text-white text-sm font-medium px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar cambios"}
             </button>
             {guardado && !guardando && (
-              <span className="inline-flex items-center gap-1.5 text-sm text-green-700">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
                 <Check className="h-4 w-4" strokeWidth={2} />
                 Guardado
               </span>
@@ -189,7 +189,7 @@ export default function ConfiguracionPage() {
 }
 
 const inputCls =
-  "w-full rounded-lg border border-borde bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent";
+  "focus-ring w-full rounded-xl bg-bg px-3 py-2 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint";
 
 function Seccion({
   titulo,
@@ -201,10 +201,10 @@ function Seccion({
   children: React.ReactNode;
 }) {
   return (
-    <section className="bg-bg rounded-2xl border border-borde p-5 shadow-sm">
-      <h2 className="text-sm font-semibold text-fg mb-1">{titulo}</h2>
-      {nota && <p className="text-[12px] text-fg-muted mb-4 leading-relaxed">{nota}</p>}
-      <div className={`space-y-3 ${nota ? "" : "mt-3"}`}>{children}</div>
+    <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+      <h2 className="text-lg font-semibold num-snug text-fg">{titulo}</h2>
+      {nota && <p className="mt-1 mb-4 text-sm font-medium leading-relaxed text-fg-muted">{nota}</p>}
+      <div className={`space-y-3 ${nota ? "" : "mt-4"}`}>{children}</div>
     </section>
   );
 }
@@ -212,7 +212,7 @@ function Seccion({
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[12px] font-medium text-fg-muted mb-1">{label}</label>
+      <label className="mb-1 block text-[13px] font-medium text-fg-muted">{label}</label>
       {children}
     </div>
   );

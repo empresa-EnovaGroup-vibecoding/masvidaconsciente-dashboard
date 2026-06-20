@@ -83,16 +83,16 @@ export default function ConocimientoPage() {
 
   return (
     <div>
-      <header className="mb-8 flex items-start justify-between gap-4">
+      <header className="mb-7 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-fg">Conocimiento del negocio</h1>
-          <p className="text-sm text-fg-muted mt-1">
+          <h1 className="text-[26px] font-extrabold num-tight text-fg">Conocimiento del negocio</h1>
+          <p className="mt-1 text-[15px] font-medium text-fg-muted">
             Lo que el bot usa para responder dudas. Mientras más cargues aquí, menos improvisa.
           </p>
         </div>
         <button
           onClick={() => setForm({ ...FORM_VACIO })}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-sm font-medium px-3.5 py-2 hover:opacity-90 transition-opacity"
+          className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
           Nueva entrada
@@ -100,7 +100,7 @@ export default function ConocimientoPage() {
       </header>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
           {error}
         </div>
       )}
@@ -108,38 +108,38 @@ export default function ConocimientoPage() {
       {items === null ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-20 rounded-2xl bg-bg border border-borde animate-pulse" />
+            <div key={i} className="h-20 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-borde bg-bg p-12 text-center">
-          <div className="mx-auto h-11 w-11 rounded-2xl bg-bg-subtle flex items-center justify-center mb-4">
-            <Lightbulb className="h-5 w-5 text-fg-muted/60" strokeWidth={1.8} />
+        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
+          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+            <Lightbulb className="h-5 w-5" strokeWidth={1.8} />
           </div>
-          <p className="text-sm font-medium text-fg">Aún no hay información cargada</p>
-          <p className="text-sm text-fg-muted mt-1">
+          <p className="text-sm font-semibold text-fg">Aún no hay información cargada</p>
+          <p className="mt-1 text-sm font-medium text-fg-muted">
             Agrega lo que tus clientes preguntan seguido: ingredientes, horarios, envíos…
           </p>
         </div>
       ) : (
         categorias.map((cat) => (
           <section key={cat.key} className="mb-8">
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted/70 mb-3">
+            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
               {cat.label}
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {items
                 .filter((i) => (i.categoria || "faq") === cat.key)
                 .map((i) => (
-                  <div key={i.id} className="bg-bg rounded-2xl border border-borde p-4 shadow-sm">
+                  <div key={i.id} className="rounded-2xl bg-bg p-5 shadow-card ring-hair">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-fg">{i.titulo}</p>
-                        <p className="text-[13px] text-fg-muted mt-1 leading-relaxed whitespace-pre-wrap">
+                        <p className="text-sm font-semibold text-fg">{i.titulo}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-fg-muted">
                           {i.contenido}
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() =>
                             setForm({
@@ -149,15 +149,17 @@ export default function ConocimientoPage() {
                               contenido: i.contenido,
                             })
                           }
-                          className="p-1.5 rounded-lg text-fg-muted hover:text-fg hover:bg-bg-subtle transition-colors"
+                          className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-bg-subtle hover:text-fg"
                           title="Editar"
+                          aria-label="Editar"
                         >
                           <Pencil className="h-4 w-4" strokeWidth={1.8} />
                         </button>
                         <button
                           onClick={() => borrar(i.id)}
-                          className="p-1.5 rounded-lg text-fg-muted hover:text-red-600 hover:bg-red-50 transition-colors"
+                          className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-red-50 hover:text-red-600"
                           title="Borrar"
+                          aria-label="Borrar"
                         >
                           <Trash2 className="h-4 w-4" strokeWidth={1.8} />
                         </button>
@@ -176,21 +178,25 @@ export default function ConocimientoPage() {
           onClick={() => !guardando && setForm(null)}
         >
           <div
-            className="w-full max-w-md bg-bg rounded-2xl border border-borde shadow-xl p-6"
+            className="w-full max-w-md rounded-2xl bg-bg p-6 shadow-soft ring-hair"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-semibold text-fg">
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-lg font-semibold num-snug text-fg">
                 {form.id ? "Editar entrada" : "Nueva entrada"}
               </h3>
-              <button onClick={() => setForm(null)} className="text-fg-muted hover:text-fg">
+              <button
+                onClick={() => setForm(null)}
+                className="focus-ring rounded-lg p-1 text-fg-muted transition hover:bg-bg-subtle hover:text-fg"
+                aria-label="Cerrar"
+              >
                 <X className="h-5 w-5" strokeWidth={1.8} />
               </button>
             </div>
 
             <div className="space-y-3.5">
               <div>
-                <label className="block text-[12px] font-medium text-fg-muted mb-1">Categoría</label>
+                <label className="mb-1 block text-[12px] font-semibold text-fg-muted">Categoría</label>
                 <select
                   className={inputCls}
                   value={form.categoria}
@@ -207,7 +213,7 @@ export default function ConocimientoPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-fg-muted mb-1">
+                <label className="mb-1 block text-[12px] font-semibold text-fg-muted">
                   Pregunta o título
                 </label>
                 <input
@@ -218,7 +224,7 @@ export default function ConocimientoPage() {
                 />
               </div>
               <div>
-                <label className="block text-[12px] font-medium text-fg-muted mb-1">Respuesta</label>
+                <label className="mb-1 block text-[12px] font-semibold text-fg-muted">Respuesta</label>
                 <textarea
                   className={`${inputCls} resize-y`}
                   rows={4}
@@ -229,18 +235,18 @@ export default function ConocimientoPage() {
               </div>
             </div>
 
-            <div className="flex gap-2 mt-6">
+            <div className="mt-6 flex gap-2">
               <button
                 onClick={() => setForm(null)}
                 disabled={guardando}
-                className="flex-1 rounded-lg border border-borde text-sm font-medium text-fg-muted py-2 hover:bg-bg-subtle transition-colors disabled:opacity-50"
+                className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-bg px-4 py-2.5 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={guardar}
                 disabled={guardando || !form.titulo.trim() || !form.contenido.trim()}
-                className="flex-1 rounded-lg bg-accent text-white text-sm font-medium py-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
               >
                 {guardando ? "Guardando…" : "Guardar"}
               </button>
@@ -253,4 +259,4 @@ export default function ConocimientoPage() {
 }
 
 const inputCls =
-  "w-full rounded-lg border border-borde bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent";
+  "focus-ring w-full rounded-xl bg-bg px-3 py-2 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint";

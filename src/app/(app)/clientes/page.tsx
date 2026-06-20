@@ -14,6 +14,14 @@ import { formatUSD } from "@/lib/format";
 const fecha = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("es-VE", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
+const ESTADO_PEDIDO: Record<string, string> = {
+  pendiente: "bg-warn-bg text-warn ring-warn-border",
+  confirmado: "bg-accent/10 text-accent ring-accent/15",
+  preparando: "bg-bg-subtle text-fg-muted ring-borde",
+  entregado: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
+  cancelado: "bg-red-50 text-red-700 ring-red-600/15",
+};
+
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteResumen[] | null>(null);
   const [error, setError] = useState("");
@@ -62,107 +70,144 @@ export default function ClientesPage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Clientes</h1>
-        <p className="text-sm text-fg-muted mt-1">Tu gente: cuánto compran y notas para atenderlos mejor</p>
+      <header className="mb-7">
+        <h1 className="text-[26px] font-extrabold num-tight text-fg">Clientes</h1>
+        <p className="mt-1 text-[15px] font-medium text-fg-muted">
+          Tu gente: cuánto compran y notas para atenderlos mejor
+        </p>
       </header>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
           {error}
         </div>
       )}
 
       {clientes === null ? (
-        <div className="h-64 rounded-2xl bg-bg border border-borde animate-pulse" />
-      ) : clientes.length === 0 ? (
-        <div className="rounded-2xl border border-borde bg-bg p-12 text-center">
-          <div className="mx-auto h-11 w-11 rounded-2xl bg-bg-subtle flex items-center justify-center mb-4">
-            <Users className="h-5 w-5 text-fg-muted/60" strokeWidth={1.8} />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <div className="h-10 animate-pulse rounded-xl bg-bg shadow-card ring-hair" />
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-bg shadow-card ring-hair" />
+            ))}
           </div>
-          <p className="text-sm font-medium text-fg">Aún no hay clientes</p>
-          <p className="text-sm text-fg-muted mt-1">Aparecerán cuando alguien escriba por WhatsApp.</p>
+          <div className="h-[420px] animate-pulse rounded-2xl bg-bg shadow-card ring-hair md:col-span-2" />
+        </div>
+      ) : clientes.length === 0 ? (
+        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
+          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+            <Users className="h-5 w-5" strokeWidth={1.8} />
+          </div>
+          <p className="text-sm font-semibold text-fg">Aún no hay clientes</p>
+          <p className="mt-1 text-sm font-medium text-fg-muted">
+            Aparecerán cuando alguien escriba por WhatsApp.
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Lista + buscador */}
           <div className="space-y-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-muted/60" strokeWidth={1.8} />
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-faint"
+                strokeWidth={1.8}
+              />
               <input
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
+                aria-label="Buscar cliente por nombre o teléfono"
                 placeholder="Buscar por nombre o teléfono"
-                className="w-full rounded-xl border border-borde bg-bg pl-9 pr-3 py-2 text-sm text-fg placeholder:text-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                className="focus-ring w-full rounded-xl bg-bg py-2 pl-9 pr-3 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint"
               />
             </div>
-            <div className="space-y-1.5 max-h-[520px] overflow-y-auto">
+            <div className="max-h-[520px] space-y-1.5 overflow-y-auto">
               {lista.map((c) => (
                 <button
                   key={c.telefono}
                   onClick={() => abrir(c.telefono)}
-                  className={`w-full text-left rounded-xl border p-3 transition-all duration-200 ${
+                  className={`focus-ring w-full rounded-xl p-3 text-left transition ${
                     activa === c.telefono
-                      ? "border-accent bg-bg shadow-sm"
-                      : "border-borde bg-bg hover:border-fg-muted/30"
+                      ? "bg-bg shadow-card ring-1 ring-accent"
+                      : "bg-bg ring-hair hover:bg-bg-subtle"
                   }`}
                 >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-sm font-medium text-fg truncate">{c.nombre || c.telefono}</p>
-                    <span className="text-[13px] font-semibold text-accent tnum shrink-0">
-                      {formatUSD(c.total_gastado_usd)}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
+                      {(c.nombre || c.telefono).charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="truncate text-sm font-semibold text-fg">{c.nombre || c.telefono}</p>
+                        <span className="shrink-0 text-[13px] font-bold text-accent tnum num-snug">
+                          {formatUSD(c.total_gastado_usd)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs font-medium text-fg-muted tnum">
+                        {c.num_pedidos} {c.num_pedidos === 1 ? "pedido" : "pedidos"} · última{" "}
+                        {fecha(c.ultima_compra)}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[12px] text-fg-muted mt-0.5 tnum">
-                    {c.num_pedidos} {c.num_pedidos === 1 ? "pedido" : "pedidos"} · última {fecha(c.ultima_compra)}
-                  </p>
                 </button>
               ))}
               {lista.length === 0 && (
-                <p className="text-[13px] text-fg-muted px-1 py-3">Sin resultados para “{busqueda}”.</p>
+                <p className="px-1 py-3 text-[13px] font-medium text-fg-muted">
+                  Sin resultados para “{busqueda}”.
+                </p>
               )}
             </div>
           </div>
 
           {/* Ficha */}
-          <div className="md:col-span-2 bg-bg rounded-2xl border border-borde p-5 min-h-[420px]">
+          <div className="min-h-[420px] rounded-2xl bg-bg p-6 shadow-card ring-hair md:col-span-2">
             {!activa ? (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-sm text-fg-muted">Elige un cliente para ver su ficha</p>
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm font-medium text-fg-muted">Elige un cliente para ver su ficha</p>
               </div>
             ) : detalle === null ? (
               <div className="space-y-3">
-                <div className="h-8 w-40 rounded bg-bg-subtle animate-pulse" />
-                <div className="h-20 rounded-xl bg-bg-subtle animate-pulse" />
+                <div className="h-8 w-40 animate-pulse rounded-md bg-bg-subtle" />
+                <div className="h-20 animate-pulse rounded-xl bg-bg-subtle" />
               </div>
             ) : (
               <div>
-                <div className="flex items-baseline justify-between gap-3 mb-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-fg">{detalle.nombre || "Cliente"}</h2>
-                    <p className="text-[13px] text-fg-muted tnum">{detalle.telefono}</p>
+                <div className="mb-5 flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/10 text-base font-bold text-accent ring-1 ring-accent/15">
+                      {(detalle.nombre || "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold num-snug text-fg">{detalle.nombre || "Cliente"}</h2>
+                      <p className="text-[13px] font-medium text-fg-muted tnum">{detalle.telefono}</p>
+                    </div>
                   </div>
-                  <p className="text-[12px] text-fg-muted">Cliente desde {fecha(detalle.primera_interaccion)}</p>
+                  <p className="text-xs font-medium text-fg-muted">
+                    Cliente desde {fecha(detalle.primera_interaccion)}
+                  </p>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div className="rounded-xl bg-bg-subtle/50 border border-borde p-3">
-                    <p className="text-[12px] text-fg-muted">Total gastado</p>
-                    <p className="text-xl font-semibold text-accent tnum">{formatUSD(detalle.total_gastado_usd)}</p>
+                <div className="mb-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-bg-subtle/60 p-4 ring-hair">
+                    <p className="text-xs font-medium text-fg-muted">Total gastado</p>
+                    <p className="mt-0.5 text-2xl font-extrabold num-snug text-accent tnum">
+                      {formatUSD(detalle.total_gastado_usd)}
+                    </p>
                   </div>
-                  <div className="rounded-xl bg-bg-subtle/50 border border-borde p-3">
-                    <p className="text-[12px] text-fg-muted">Pedidos</p>
-                    <p className="text-xl font-semibold text-fg tnum">{detalle.num_pedidos}</p>
+                  <div className="rounded-xl bg-bg-subtle/60 p-4 ring-hair">
+                    <p className="text-xs font-medium text-fg-muted">Pedidos</p>
+                    <p className="mt-0.5 text-2xl font-extrabold num-snug text-fg tnum">{detalle.num_pedidos}</p>
                   </div>
                 </div>
 
                 {/* Notas internas */}
-                <div className="mb-5">
-                  <label className="block text-[12px] font-medium text-fg-muted mb-1">
-                    Notas internas <span className="font-normal">(privadas — el cliente nunca las ve)</span>
+                <div className="mb-6">
+                  <label htmlFor="notas-cliente" className="mb-1.5 block text-sm font-semibold text-fg">
+                    Notas internas{" "}
+                    <span className="font-medium text-fg-muted">(privadas — el cliente nunca las ve)</span>
                   </label>
                   <textarea
+                    id="notas-cliente"
                     value={notas}
                     onChange={(e) => {
                       setNotas(e.target.value);
@@ -170,18 +215,18 @@ export default function ClientesPage() {
                     }}
                     rows={3}
                     placeholder="Ej. alérgica al maní, pide sin azúcar, entrega los sábados…"
-                    className="w-full rounded-xl border border-borde bg-bg px-3.5 py-2.5 text-[13px] leading-relaxed text-fg resize-y focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                    className="focus-ring w-full resize-y rounded-xl bg-bg px-3 py-2 text-sm leading-relaxed text-fg ring-1 ring-borde placeholder:text-fg-faint"
                   />
-                  <div className="flex items-center gap-3 mt-2">
+                  <div className="mt-3 flex items-center gap-3">
                     <button
                       onClick={guardarNotas}
                       disabled={guardando}
-                      className="rounded-lg bg-accent text-white text-[13px] font-medium px-4 py-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                      className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
                     >
                       {guardando ? "Guardando…" : "Guardar nota"}
                     </button>
                     {notasOk && !guardando && (
-                      <span className="inline-flex items-center gap-1.5 text-[13px] text-green-700">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
                         <Check className="h-4 w-4" strokeWidth={2} /> Guardado
                       </span>
                     )}
@@ -189,24 +234,33 @@ export default function ClientesPage() {
                 </div>
 
                 {/* Historial */}
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted/70 mb-2">
+                <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
                   Historial de pedidos
-                </p>
+                </h3>
                 {detalle.pedidos.length === 0 ? (
-                  <p className="text-[13px] text-fg-muted">Todavía no ha hecho pedidos.</p>
+                  <p className="text-[13px] font-medium text-fg-muted">Todavía no ha hecho pedidos.</p>
                 ) : (
                   <div className="space-y-2">
                     {detalle.pedidos.map((p) => (
-                      <div key={p.id} className="rounded-xl border border-borde p-3">
+                      <div key={p.id} className="rounded-xl bg-bg p-4 ring-hair">
                         <div className="flex items-baseline justify-between gap-2">
-                          <p className="text-[13px] font-medium text-fg">Pedido #{p.id}</p>
-                          <span className="text-[13px] font-semibold text-fg tnum">{formatUSD(p.total_usd)}</span>
+                          <p className="text-[13px] font-semibold text-fg tnum">Pedido #{p.id}</p>
+                          <span className="text-[13px] font-bold text-fg tnum num-snug">
+                            {formatUSD(p.total_usd)}
+                          </span>
                         </div>
-                        <p className="text-[12px] text-fg-muted mt-0.5">
-                          {fecha(p.fecha)} · {p.estado}
-                        </p>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <span className="text-xs font-medium text-fg-muted">{fecha(p.fecha)}</span>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ring-1 ring-inset ${
+                              ESTADO_PEDIDO[p.estado] ?? ESTADO_PEDIDO.preparando
+                            }`}
+                          >
+                            {p.estado}
+                          </span>
+                        </div>
                         {p.items && p.items.length > 0 && (
-                          <p className="text-[12px] text-fg-muted mt-1 truncate">
+                          <p className="mt-1.5 truncate text-xs font-medium text-fg-muted">
                             {p.items.map((it) => `${it.cantidad}× ${it.producto}`).join(", ")}
                           </p>
                         )}

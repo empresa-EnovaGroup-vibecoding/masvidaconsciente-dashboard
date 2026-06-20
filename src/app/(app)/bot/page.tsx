@@ -94,24 +94,24 @@ export default function BotPage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Mi Bot</h1>
-        <p className="text-sm text-fg-muted mt-1">
+      <header className="mb-7">
+        <h1 className="text-[26px] font-extrabold num-tight text-fg">Mi Bot</h1>
+        <p className="mt-1 text-[15px] font-medium text-fg-muted">
           Ajusta cómo habla tu asistente y pruébalo en vivo, sin gastar WhatsApp.
         </p>
       </header>
 
       {/* Interruptor del bot */}
-      <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-borde bg-bg p-5 shadow-sm">
+      <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl bg-bg p-5 shadow-card ring-hair">
         <div className="flex items-center gap-3">
           <span
-            className={`h-2.5 w-2.5 rounded-full ${botActivo === false ? "bg-red-500" : "bg-green-500"}`}
+            className={`h-2.5 w-2.5 rounded-full ${botActivo === false ? "bg-red-500" : "bg-accent"}`}
           />
           <div>
-            <p className="text-sm font-medium text-fg">
+            <p className="text-sm font-semibold text-fg">
               {botActivo === null ? "Cargando…" : botActivo ? "Bot encendido" : "Bot apagado"}
             </p>
-            <p className="text-[12px] text-fg-muted">
+            <p className="mt-0.5 text-[13px] font-medium text-fg-muted">
               {botActivo === false
                 ? "No responde solo. Los mensajes te llegan para que respondas tú; los pagos siguen entrando."
                 : "Responde automáticamente a tus clientes por WhatsApp."}
@@ -121,33 +121,33 @@ export default function BotPage() {
         <button
           onClick={toggleBot}
           disabled={cambiando || botActivo === null}
-          className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-50 ${
+          className={
             botActivo === false
-              ? "bg-accent text-white hover:opacity-90"
-              : "border border-borde text-fg hover:bg-bg-subtle"
-          }`}
+              ? "focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+              : "focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-bg px-4 py-2.5 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
+          }
         >
           <Power className="h-4 w-4" strokeWidth={2} />
           {cambiando ? "…" : botActivo === false ? "Encender" : "Apagar"}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* ── Personalidad ── */}
-        <section className="bg-bg rounded-2xl border border-borde p-5 shadow-sm flex flex-col">
-          <h2 className="text-sm font-semibold text-fg mb-1">Personalidad</h2>
-          <p className="text-[12px] text-fg-muted mb-3 leading-relaxed">
+        <section className="flex flex-col rounded-2xl bg-bg p-6 shadow-card ring-hair">
+          <h2 className="text-lg font-semibold num-snug text-fg">Personalidad</h2>
+          <p className="mt-1 mb-4 text-sm font-medium leading-relaxed text-fg-muted">
             Escribe en tus palabras cómo debe ser tu asistente: su tono, qué resaltar, cómo cerrar la venta.
           </p>
 
           {errorP && (
-            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
+            <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
               {errorP}
             </div>
           )}
 
           {texto === null ? (
-            <div className="h-72 rounded-xl bg-bg-subtle border border-borde animate-pulse" />
+            <div className="h-72 animate-pulse rounded-xl bg-bg-subtle ring-hair" />
           ) : (
             <textarea
               value={texto}
@@ -155,16 +155,17 @@ export default function BotPage() {
                 setTexto(e.target.value);
                 setGuardado(false);
               }}
-              className="w-full h-72 rounded-xl border border-borde bg-bg px-3.5 py-3 text-[13px] leading-relaxed text-fg resize-y focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+              aria-label="Personalidad del bot"
+              className="focus-ring h-72 w-full resize-y rounded-xl bg-bg px-3 py-2 text-sm leading-relaxed text-fg ring-1 ring-borde placeholder:text-fg-faint"
               placeholder="Cómo habla tu asistente…"
             />
           )}
 
-          <div className="flex items-center gap-3 mt-3 flex-wrap">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               onClick={guardar}
               disabled={guardando || texto === null}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent text-white text-sm font-medium px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar"}
             </button>
@@ -174,50 +175,50 @@ export default function BotPage() {
                 setGuardado(false);
               }}
               disabled={texto === null}
-              className="inline-flex items-center gap-1.5 text-[13px] text-fg-muted hover:text-fg transition-colors disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-bg px-4 py-2.5 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
             >
               <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.8} />
               Restaurar original
             </button>
             {guardado && !guardando && (
-              <span className="inline-flex items-center gap-1.5 text-sm text-green-700">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
                 <Check className="h-4 w-4" strokeWidth={2} />
                 Guardado
               </span>
             )}
           </div>
 
-          <div className="mt-4 flex items-start gap-2 rounded-xl bg-bg-subtle/60 border border-borde p-3">
-            <Lock className="h-4 w-4 text-fg-muted mt-0.5 shrink-0" strokeWidth={1.8} />
-            <p className="text-[12px] text-fg-muted leading-relaxed">
-              Las <span className="font-medium text-fg">reglas del cobro</span> (precios reales, nunca
-              confirmar un pago solo, etc.) están <span className="font-medium text-fg">protegidas</span> y
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-bg-subtle/60 p-4 ring-hair">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" strokeWidth={1.8} />
+            <p className="text-[13px] font-medium leading-relaxed text-fg-muted">
+              Las <span className="font-semibold text-fg">reglas del cobro</span> (precios reales, nunca
+              confirmar un pago solo, etc.) están <span className="font-semibold text-fg">protegidas</span> y
               no se editan aquí — para que nunca puedas romper el cobro sin querer.
             </p>
           </div>
         </section>
 
         {/* ── Simulador ── */}
-        <section className="bg-bg rounded-2xl border border-borde p-5 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-3">
+        <section className="flex flex-col rounded-2xl bg-bg p-6 shadow-card ring-hair">
+          <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-fg">Probar el bot</h2>
-              <p className="text-[12px] text-fg-muted">Escríbele como si fueras un cliente.</p>
+              <h2 className="text-lg font-semibold num-snug text-fg">Probar el bot</h2>
+              <p className="mt-1 text-sm font-medium text-fg-muted">Escríbele como si fueras un cliente.</p>
             </div>
             {mensajes.length > 0 && (
               <button
                 onClick={() => setMensajes([])}
-                className="text-[12px] text-fg-muted hover:text-fg transition-colors"
+                className="focus-ring rounded-lg px-2 py-1 text-[13px] font-semibold text-fg-muted transition hover:text-fg"
               >
                 Limpiar
               </button>
             )}
           </div>
 
-          <div className="flex-1 min-h-[300px] max-h-[360px] overflow-y-auto rounded-xl bg-bg-subtle/40 border border-borde p-3 space-y-2.5">
+          <div className="max-h-[360px] min-h-[300px] flex-1 space-y-2.5 overflow-y-auto rounded-xl bg-bg-subtle/40 p-3 ring-hair">
             {mensajes.length === 0 && !pensando ? (
-              <div className="h-full flex items-center justify-center text-center px-6">
-                <p className="text-[13px] text-fg-muted">
+              <div className="flex h-full items-center justify-center px-6 text-center">
+                <p className="text-sm font-medium text-fg-muted">
                   Escribe abajo (ej. <span className="italic">&quot;hola, ¿qué tienen?&quot;</span>) y mira cómo responde.
                 </p>
               </div>
@@ -226,10 +227,10 @@ export default function BotPage() {
                 {mensajes.map((m, i) => (
                   <div key={i} className={`flex ${m.rol === "user" ? "justify-end" : "justify-start"}`}>
                     <div
-                      className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed whitespace-pre-wrap ${
+                      className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
                         m.rol === "user"
-                          ? "bg-accent text-white rounded-br-md"
-                          : "bg-bg text-fg border border-borde rounded-bl-md"
+                          ? "rounded-br-md bg-accent font-medium text-accent-fg"
+                          : "rounded-bl-md bg-bg text-fg ring-hair"
                       }`}
                     >
                       {m.texto}
@@ -238,7 +239,7 @@ export default function BotPage() {
                 ))}
                 {pensando && (
                   <div className="flex justify-start">
-                    <div className="bg-bg border border-borde rounded-2xl rounded-bl-md px-3.5 py-2 text-[13px] text-fg-muted">
+                    <div className="rounded-2xl rounded-bl-md bg-bg px-3.5 py-2 text-[13px] font-medium text-fg-muted ring-hair">
                       escribiendo…
                     </div>
                   </div>
@@ -248,9 +249,13 @@ export default function BotPage() {
             <div ref={finChat} />
           </div>
 
-          {errorS && <div className="mt-2 text-[12px] text-red-600">{errorS}</div>}
+          {errorS && (
+            <div className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
+              {errorS}
+            </div>
+          )}
 
-          <div className="flex items-center gap-2 mt-3">
+          <div className="mt-3 flex items-center gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -258,13 +263,15 @@ export default function BotPage() {
                 if (e.key === "Enter") enviar();
               }}
               disabled={pensando}
+              aria-label="Mensaje de prueba"
               placeholder="Escribe un mensaje de prueba…"
-              className="flex-1 rounded-lg border border-borde bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent disabled:opacity-50"
+              className="focus-ring w-full flex-1 rounded-xl bg-bg px-3 py-2.5 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint disabled:opacity-50"
             />
             <button
               onClick={enviar}
               disabled={pensando || input.trim() === ""}
-              className="inline-flex items-center justify-center rounded-lg bg-accent text-white p-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+              aria-label="Enviar mensaje de prueba"
+              className="focus-ring inline-flex items-center justify-center rounded-xl bg-accent p-2.5 text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
             >
               <Send className="h-4 w-4" strokeWidth={2} />
             </button>

@@ -62,37 +62,38 @@ export default function MensajesPage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Mensajes automáticos</h1>
-        <p className="text-sm text-fg-muted mt-1">
-          Los momentos clave del cobro. Tú escribes la <span className="font-medium text-fg">intención</span> y el
+      <header className="mb-7">
+        <h1 className="text-[26px] font-extrabold num-tight text-fg">Mensajes automáticos</h1>
+        <p className="mt-1 text-[15px] font-medium text-fg-muted">
+          Los momentos clave del cobro. Tú escribes la <span className="font-semibold text-fg">intención</span> y el
           bot la redacta natural (no es una plantilla fija).
         </p>
       </header>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
           {error}
         </div>
       )}
 
       {datos === null ? (
-        <div className="space-y-4 max-w-2xl">
+        <div className="max-w-2xl space-y-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-32 rounded-2xl bg-bg border border-borde animate-pulse" />
+            <div key={i} className="h-32 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : (
-        <div className="space-y-5 max-w-2xl">
+        <div className="max-w-2xl space-y-6">
           {CAMPOS.map((c) => (
-            <section key={c.key} className="bg-bg rounded-2xl border border-borde p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-fg mb-1">{c.label}</h2>
-              <p className="text-[12px] text-fg-muted mb-3 leading-relaxed">{c.help}</p>
+            <section key={c.key} className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+              <h2 className="mb-1 text-lg font-semibold num-snug text-fg">{c.label}</h2>
+              <p className="mb-4 text-sm font-medium leading-relaxed text-fg-muted">{c.help}</p>
               <textarea
                 value={datos[c.key]}
                 onChange={(e) => set(c.key, e.target.value)}
                 rows={3}
-                className="w-full rounded-xl border border-borde bg-bg px-3.5 py-2.5 text-[13px] leading-relaxed text-fg resize-y focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+                aria-label={c.label}
+                className="focus-ring w-full resize-y rounded-xl bg-bg px-3 py-2 text-sm leading-relaxed text-fg ring-1 ring-borde placeholder:text-fg-faint"
               />
             </section>
           ))}
@@ -101,22 +102,22 @@ export default function MensajesPage() {
             <button
               onClick={guardar}
               disabled={guardando}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent text-white text-sm font-medium px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar cambios"}
             </button>
             {guardado && !guardando && (
-              <span className="inline-flex items-center gap-1.5 text-sm text-green-700">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
                 <Check className="h-4 w-4" strokeWidth={2} />
                 Guardado
               </span>
             )}
           </div>
 
-          <div className="rounded-xl bg-bg-subtle/60 border border-borde p-4 text-[12px] text-fg-muted leading-relaxed">
-            💡 La <span className="font-medium text-fg">bienvenida</span> y el tono general los controlas en{" "}
-            <span className="font-medium text-fg">Mi Bot</span> (la personalidad). Aquí solo afinas los
-            momentos del cobro. Y recuerda: el bot <span className="font-medium text-fg">nunca</span> dice que un
+          <div className="rounded-2xl bg-bg-subtle/60 p-5 text-sm font-medium leading-relaxed text-fg-muted ring-hair">
+            La <span className="font-semibold text-fg">bienvenida</span> y el tono general los controlas en{" "}
+            <span className="font-semibold text-fg">Mi Bot</span> (la personalidad). Aquí solo afinas los
+            momentos del cobro. Y recuerda: el bot <span className="font-semibold text-fg">nunca</span> dice que un
             pago está confirmado hasta que tú lo confirmes — eso está blindado.
           </div>
         </div>

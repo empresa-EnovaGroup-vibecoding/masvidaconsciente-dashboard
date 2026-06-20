@@ -65,65 +65,91 @@ export default function ConversacionesPage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Conversaciones</h1>
-        <p className="text-sm text-fg-muted mt-1">Los chats de WhatsApp con tus clientes</p>
+      <header className="mb-7">
+        <h1 className="text-[26px] font-extrabold num-tight text-fg">Conversaciones</h1>
+        <p className="mt-1 text-[15px] font-medium text-fg-muted">Los chats de WhatsApp con tus clientes</p>
       </header>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
           {error}
         </div>
       )}
 
       {convs === null ? (
-        <div className="h-64 rounded-2xl bg-bg border border-borde animate-pulse" />
-      ) : convs.length === 0 ? (
-        <div className="rounded-2xl border border-borde bg-bg p-12 text-center">
-          <div className="mx-auto h-11 w-11 rounded-2xl bg-bg-subtle flex items-center justify-center mb-4">
-            <MessageCircle className="h-5 w-5 text-fg-muted/60" strokeWidth={1.8} />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
+            ))}
           </div>
-          <p className="text-sm font-medium text-fg">Aún no hay conversaciones</p>
-          <p className="text-sm text-fg-muted mt-1">
+          <div className="h-[420px] animate-pulse rounded-2xl bg-bg shadow-card ring-hair md:col-span-2" />
+        </div>
+      ) : convs.length === 0 ? (
+        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
+          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+            <MessageCircle className="h-5 w-5" strokeWidth={1.8} />
+          </div>
+          <p className="text-sm font-semibold text-fg">Aún no hay conversaciones</p>
+          <p className="mt-1 text-sm font-medium text-fg-muted">
             Aparecerán cuando los clientes escriban por WhatsApp.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
-            {convs.map((c) => (
-              <button
-                key={c.telefono}
-                onClick={() => abrir(c.telefono)}
-                className={`w-full text-left rounded-xl border p-3 transition-all duration-200 ${
-                  activa === c.telefono
-                    ? "border-accent bg-bg shadow-sm"
-                    : "border-borde bg-bg hover:border-fg-muted/30"
-                }`}
-              >
-                <p className="text-sm font-medium text-fg truncate">{c.nombre || c.telefono}</p>
-                <p className="text-[13px] text-fg-muted truncate mt-0.5">{c.ultimo_mensaje || "—"}</p>
-              </button>
-            ))}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            {convs.map((c) => {
+              const seleccionada = activa === c.telefono;
+              return (
+                <button
+                  key={c.telefono}
+                  onClick={() => abrir(c.telefono)}
+                  className={`focus-ring w-full rounded-2xl bg-bg p-3 text-left shadow-card ring-hair transition hover:bg-bg-subtle/60 ${
+                    seleccionada ? "ring-1 ring-accent/30" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
+                      {(c.nombre || c.telefono || "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-fg">{c.nombre || c.telefono}</p>
+                      <p className="mt-0.5 truncate text-[13px] font-medium text-fg-muted">{c.ultimo_mensaje || "—"}</p>
+                    </div>
+                    {c.bot_pausado && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-[11px] font-semibold text-warn ring-1 ring-inset ring-warn-border">
+                        <Bot className="h-3 w-3" strokeWidth={2} />
+                        Pausado
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="md:col-span-2 bg-bg rounded-2xl border border-borde p-5 min-h-[420px]">
+          <div className="min-h-[420px] rounded-2xl bg-bg p-5 shadow-card ring-hair md:col-span-2">
             {activa ? (
               <div>
-                <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-borde">
-                  <p className="text-[13px] font-medium text-fg truncate">
-                    {convActiva?.nombre || activa}
-                  </p>
+                <div className="mb-4 flex items-center justify-between gap-2 border-b border-borde/70 pb-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
+                      {(convActiva?.nombre || activa || "?").charAt(0).toUpperCase()}
+                    </div>
+                    <p className="truncate text-sm font-semibold text-fg">
+                      {convActiva?.nombre || activa}
+                    </p>
+                  </div>
                   <button
                     onClick={togglePausa}
                     disabled={cambiandoPausa}
-                    className={`shrink-0 inline-flex items-center gap-1.5 text-[12px] font-medium rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 ${
+                    className={`focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
                       convActiva?.bot_pausado
-                        ? "bg-accent text-white hover:opacity-90"
-                        : "border border-borde text-fg-muted hover:bg-bg-subtle"
+                        ? "bg-accent text-accent-fg hover:bg-accent-soft"
+                        : "bg-bg text-fg ring-1 ring-borde hover:bg-bg-subtle"
                     }`}
                   >
-                    <Bot className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    <Bot className="h-4 w-4" strokeWidth={1.8} />
                     {cambiandoPausa
                       ? "…"
                       : convActiva?.bot_pausado
@@ -133,8 +159,8 @@ export default function ConversacionesPage() {
                 </div>
 
                 {convActiva?.bot_pausado && (
-                  <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[12px] text-amber-800">
-                    El bot está <span className="font-medium">pausado en este chat</span> — respondes tú. Los
+                  <div className="mb-4 rounded-xl bg-warn-bg px-3 py-2.5 text-[13px] font-medium text-warn ring-1 ring-inset ring-warn-border">
+                    El bot está <span className="font-semibold">pausado en este chat</span> — respondes tú. Los
                     demás clientes siguen siendo atendidos.
                   </div>
                 )}
@@ -145,8 +171,8 @@ export default function ConversacionesPage() {
                       <div
                         className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
                           m.rol === "assistant"
-                            ? "bg-accent text-accent-fg rounded-br-md"
-                            : "bg-bg-subtle text-fg rounded-bl-md"
+                            ? "rounded-br-md bg-accent text-accent-fg"
+                            : "rounded-bl-md bg-bg-subtle text-fg ring-1 ring-inset ring-borde"
                         }`}
                       >
                         {m.contenido}
@@ -156,8 +182,12 @@ export default function ConversacionesPage() {
                 </div>
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-sm text-fg-muted">Elige una conversación para verla</p>
+              <div className="flex h-full min-h-[380px] flex-col items-center justify-center text-center">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                  <MessageCircle className="h-5 w-5" strokeWidth={1.8} />
+                </div>
+                <p className="text-sm font-semibold text-fg">Elige una conversación</p>
+                <p className="mt-1 text-sm font-medium text-fg-muted">Selecciónala en la lista para verla.</p>
               </div>
             )}
           </div>
