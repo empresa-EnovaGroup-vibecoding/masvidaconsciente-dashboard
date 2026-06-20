@@ -133,7 +133,10 @@ export default function DashboardPage() {
             Así va tu negocio hoy. Sigamos cuidando a tus clientes.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-full bg-bg px-4 py-2 shadow-soft ring-hair">
+        <Link
+          href="/bot"
+          className="focus-ring flex items-center gap-2 rounded-full bg-bg px-4 py-2 shadow-soft ring-hair transition hover:bg-bg-subtle"
+        >
           {botActivo === false ? (
             <>
               <span className="h-2.5 w-2.5 rounded-full bg-fg-faint" />
@@ -148,7 +151,7 @@ export default function DashboardPage() {
               <span className="text-sm font-semibold text-fg">Bot activo</span>
             </>
           )}
-        </div>
+        </Link>
       </header>
 
       {/* ── Acciones rápidas ─────────────────────────────────────── */}
