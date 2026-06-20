@@ -10,17 +10,10 @@ import {
   type ClienteDetalle,
 } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
+import { estiloEstado } from "@/lib/estados";
 
 const fecha = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("es-VE", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-
-const ESTADO_PEDIDO: Record<string, string> = {
-  pendiente: "bg-warn-bg text-warn ring-warn-border",
-  confirmado: "bg-accent/10 text-accent ring-accent/15",
-  preparando: "bg-bg-subtle text-fg-muted ring-borde",
-  entregado: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
-  cancelado: "bg-red-50 text-red-700 ring-red-600/15",
-};
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteResumen[] | null>(null);
@@ -252,11 +245,9 @@ export default function ClientesPage() {
                         <div className="mt-1.5 flex items-center gap-2">
                           <span className="text-xs font-medium text-fg-muted">{fecha(p.fecha)}</span>
                           <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ring-1 ring-inset ${
-                              ESTADO_PEDIDO[p.estado] ?? ESTADO_PEDIDO.preparando
-                            }`}
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${estiloEstado(p.estado).cls}`}
                           >
-                            {p.estado}
+                            {estiloEstado(p.estado).label}
                           </span>
                         </div>
                         {p.items && p.items.length > 0 && (

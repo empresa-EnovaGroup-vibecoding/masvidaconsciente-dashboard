@@ -26,6 +26,7 @@ import {
   type Reporte,
   type Pedido,
 } from "@/lib/api";
+import { estiloEstado } from "@/lib/estados";
 
 // ─── Helpers de formato (Venezuela: punto de miles, coma decimal) ───────
 const fmt = (n: number) =>
@@ -57,23 +58,14 @@ function hora(fecha: string): string {
   });
 }
 
-// ─── Estilos de estado de pedido (paleta calmada) ───────────────────────
-const ESTADO: Record<string, { cls: string; dot: string }> = {
-  pendiente: { cls: "bg-warn-bg text-warn ring-warn-border", dot: "bg-warn" },
-  confirmado: { cls: "bg-accent/10 text-accent ring-accent/15", dot: "bg-accent" },
-  preparando: { cls: "bg-bg-subtle text-fg-muted ring-borde", dot: "bg-fg-faint" },
-  entregado: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-600/15", dot: "bg-emerald-500" },
-  cancelado: { cls: "bg-red-50 text-red-700 ring-red-600/15", dot: "bg-red-500" },
-};
-
 function EstadoBadge({ estado }: { estado: string }) {
-  const e = ESTADO[estado] ?? ESTADO.preparando;
+  const e = estiloEstado(estado);
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${e.cls}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${e.cls}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${e.dot}`} />
-      {estado}
+      {e.label}
     </span>
   );
 }

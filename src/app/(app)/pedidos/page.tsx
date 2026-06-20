@@ -4,16 +4,7 @@ import { useEffect, useState } from "react";
 import { ShoppingBag } from "lucide-react";
 import { getPedidos, cambiarEstadoPedido, type Pedido } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
-
-const ESTADOS = ["pendiente", "confirmado", "preparando", "entregado", "cancelado"];
-
-const ESTADO: Record<string, { cls: string; dot: string }> = {
-  pendiente: { cls: "bg-warn-bg text-warn ring-warn-border", dot: "bg-warn" },
-  confirmado: { cls: "bg-accent/10 text-accent ring-accent/15", dot: "bg-accent" },
-  preparando: { cls: "bg-bg-subtle text-fg-muted ring-borde", dot: "bg-fg-faint" },
-  entregado: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-600/15", dot: "bg-emerald-500" },
-  cancelado: { cls: "bg-red-50 text-red-700 ring-red-600/15", dot: "bg-red-500" },
-};
+import { estiloEstado, ESTADOS_PEDIDO_MANUALES } from "@/lib/estados";
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[] | null>(null);
@@ -61,7 +52,7 @@ export default function PedidosPage() {
       ) : (
         <div className="space-y-3">
           {pedidos.map((p) => {
-            const est = ESTADO[p.estado] ?? ESTADO.preparando;
+            const est = estiloEstado(p.estado);
             return (
               <div key={p.id} className="rounded-2xl bg-bg p-5 shadow-card ring-hair">
                 <div className="mb-4 flex items-start justify-between gap-4">
@@ -77,10 +68,10 @@ export default function PedidosPage() {
                   <div className="text-right">
                     <p className="text-lg font-extrabold num-snug text-fg tnum">{formatUSD(p.total_usd)}</p>
                     <span
-                      className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${est.cls}`}
+                      className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${est.cls}`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${est.dot}`} />
-                      {p.estado}
+                      {est.label}
                     </span>
                   </div>
                 </div>
@@ -101,11 +92,16 @@ export default function PedidosPage() {
                 <select
                   value={p.estado}
                   onChange={(e) => actualizar(p.id, e.target.value)}
-                  className="focus-ring rounded-xl bg-bg px-3 py-2 text-[13px] capitalize text-fg ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none"
+                  className="focus-ring rounded-xl bg-bg px-3 py-2 text-[13px] text-fg ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none"
                 >
-                  {ESTADOS.map((e) => (
+                  {!ESTADOS_PEDIDO_MANUALES.includes(p.estado) && (
+                    <option value={p.estado} disabled>
+                      {est.label}
+                    </option>
+                  )}
+                  {ESTADOS_PEDIDO_MANUALES.map((e) => (
                     <option key={e} value={e}>
-                      {e}
+                      {estiloEstado(e).label}
                     </option>
                   ))}
                 </select>
