@@ -18,7 +18,17 @@ const VACIO: ConfiguracionNegocio = {
   pago_movil_telefono: "",
   pago_movil_titular: "",
   dueno_telefono: "",
+  modelo_ia: "",
 };
+
+// Modelos que puede usar el bot para conversar. El slug es el identificador de
+// OpenRouter; la transcripción de notas de voz NO se ve afectada (va por Gemini).
+const MODELOS = [
+  { slug: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash — económico (~$2 / 1.000 msgs)" },
+  { slug: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5 — recomendado: listo y barato (~$5,5 / 1.000)" },
+  { slug: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6 — el más fino para vender (~$16 / 1.000)" },
+  { slug: "openai/gpt-4.1", label: "GPT-4.1 (OpenAI) — equilibrado (~$10 / 1.000)" },
+];
 
 export default function ConfiguracionPage() {
   const [datos, setDatos] = useState<ConfiguracionNegocio | null>(null);
@@ -135,6 +145,25 @@ export default function ConfiguracionPage() {
               <input className={inputCls} value={datos.dueno_telefono ?? ""}
                 onChange={(e) => set("dueno_telefono", e.target.value)}
                 placeholder="Ej. 584121234567" />
+            </Campo>
+          </Seccion>
+
+          <Seccion
+            titulo="Modelo de IA (avanzado)"
+            nota="El cerebro con el que el bot conversa. Si sientes que ignora matices (tono, qué producto es cuál), prueba uno más inteligente. Ojo: las notas de voz se transcriben siempre con Gemini — esto no las cambia."
+          >
+            <Campo label="Modelo del bot">
+              <select
+                className={inputCls}
+                value={datos.modelo_ia || "google/gemini-2.5-flash"}
+                onChange={(e) => set("modelo_ia", e.target.value)}
+              >
+                {MODELOS.map((m) => (
+                  <option key={m.slug} value={m.slug}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
             </Campo>
           </Seccion>
 

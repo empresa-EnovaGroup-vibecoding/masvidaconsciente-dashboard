@@ -132,6 +132,8 @@ export interface ConfiguracionNegocio {
   pago_movil_telefono: string | null;
   pago_movil_titular: string | null;
   dueno_telefono: string | null;
+  // Modelo de IA con el que el bot conversa. Lo elige la proveedora.
+  modelo_ia: string | null;
 }
 
 export interface ReportePeriodo {
