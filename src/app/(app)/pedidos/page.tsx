@@ -3,15 +3,16 @@
 import { useEffect, useState } from "react";
 import { ShoppingBag } from "lucide-react";
 import { getPedidos, cambiarEstadoPedido, type Pedido } from "@/lib/api";
+import { formatUSD } from "@/lib/format";
 
 const ESTADOS = ["pendiente", "confirmado", "preparando", "entregado", "cancelado"];
 
-const COLOR: Record<string, string> = {
-  pendiente: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  confirmado: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  preparando: "bg-violet-50 text-violet-700 ring-violet-600/20",
-  entregado: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  cancelado: "bg-red-50 text-red-700 ring-red-600/20",
+const ESTADO: Record<string, { cls: string; dot: string }> = {
+  pendiente: { cls: "bg-warn-bg text-warn ring-warn-border", dot: "bg-warn" },
+  confirmado: { cls: "bg-accent/10 text-accent ring-accent/15", dot: "bg-accent" },
+  preparando: { cls: "bg-bg-subtle text-fg-muted ring-borde", dot: "bg-fg-faint" },
+  entregado: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-600/15", dot: "bg-emerald-500" },
+  cancelado: { cls: "bg-red-50 text-red-700 ring-red-600/15", dot: "bg-red-500" },
 };
 
 export default function PedidosPage() {
@@ -30,13 +31,13 @@ export default function PedidosPage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Pedidos</h1>
-        <p className="text-sm text-fg-muted mt-1">Todos los pedidos de tus clientes</p>
+      <header className="mb-7">
+        <h1 className="text-[26px] font-extrabold num-tight text-fg">Pedidos</h1>
+        <p className="mt-1 text-[15px] font-medium text-fg-muted">Todos los pedidos de tus clientes</p>
       </header>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
           {error}
         </div>
       )}
@@ -44,66 +45,73 @@ export default function PedidosPage() {
       {pedidos === null ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-28 rounded-2xl bg-bg border border-borde animate-pulse" />
+            <div key={i} className="h-28 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : pedidos.length === 0 ? (
-        <div className="rounded-2xl border border-borde bg-bg p-12 text-center">
-          <div className="mx-auto h-11 w-11 rounded-2xl bg-bg-subtle flex items-center justify-center mb-4">
-            <ShoppingBag className="h-5 w-5 text-fg-muted/60" strokeWidth={1.8} />
+        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
+          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+            <ShoppingBag className="h-5 w-5" strokeWidth={1.8} />
           </div>
-          <p className="text-sm font-medium text-fg">Aún no hay pedidos</p>
-          <p className="text-sm text-fg-muted mt-1">
+          <p className="text-sm font-semibold text-fg">Aún no hay pedidos</p>
+          <p className="mt-1 text-sm font-medium text-fg-muted">
             Cuando un cliente ordene por WhatsApp, aparecerá aquí.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {pedidos.map((p) => (
-            <div
-              key={p.id}
-              className="bg-bg rounded-2xl border border-borde p-5 shadow-sm hover:shadow-md transition-shadow duration-200"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium text-fg">Pedido #{p.id}</p>
-                  <p className="text-[13px] text-fg-muted mt-0.5 tnum">{p.cliente}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-semibold tracking-tight text-fg tnum">${p.total_usd.toFixed(2)}</p>
-                  <span
-                    className={`inline-block mt-1 text-[11px] font-medium px-2 py-0.5 rounded-full ring-1 ring-inset capitalize ${COLOR[p.estado] || ""}`}
-                  >
-                    {p.estado}
-                  </span>
-                </div>
-              </div>
-              <ul className="text-[13px] text-fg-muted space-y-1 mb-4">
-                {p.items.map((it, i) => (
-                  <li key={i} className="flex justify-between">
-                    <span className="text-fg">
-                      <span className="tnum">{it.cantidad}×</span> {it.producto}
+          {pedidos.map((p) => {
+            const est = ESTADO[p.estado] ?? ESTADO.preparando;
+            return (
+              <div key={p.id} className="rounded-2xl bg-bg p-5 shadow-card ring-hair">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
+                      {(p.cliente || "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-fg">{p.cliente}</p>
+                      <p className="text-xs font-medium text-fg-muted tnum">Pedido #{p.id}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-extrabold num-snug text-fg tnum">{formatUSD(p.total_usd)}</p>
+                    <span
+                      className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${est.cls}`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${est.dot}`} />
+                      {p.estado}
                     </span>
-                    {it.precio_unitario != null && (
-                      <span className="tnum">${it.precio_unitario}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {p.notas && <p className="text-[13px] text-fg-muted italic mb-4">Nota: {p.notas}</p>}
-              <select
-                value={p.estado}
-                onChange={(e) => actualizar(p.id, e.target.value)}
-                className="text-[13px] rounded-lg border border-borde bg-bg px-3 py-1.5 text-fg capitalize focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition"
-              >
-                {ESTADOS.map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
+                  </div>
+                </div>
+
+                <ul className="mb-4 space-y-1 text-[13px] text-fg-muted">
+                  {p.items.map((it, i) => (
+                    <li key={i} className="flex justify-between">
+                      <span className="text-fg">
+                        <span className="tnum">{it.cantidad}×</span> {it.producto}
+                      </span>
+                      {it.precio_unitario != null && <span className="tnum">{formatUSD(it.precio_unitario)}</span>}
+                    </li>
+                  ))}
+                </ul>
+
+                {p.notas && <p className="mb-4 text-[13px] italic text-fg-muted">Nota: {p.notas}</p>}
+
+                <select
+                  value={p.estado}
+                  onChange={(e) => actualizar(p.id, e.target.value)}
+                  className="focus-ring rounded-xl bg-bg px-3 py-2 text-[13px] capitalize text-fg ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none"
+                >
+                  {ESTADOS.map((e) => (
+                    <option key={e} value={e}>
+                      {e}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Lock } from "lucide-react";
+import { Check, Lock, RefreshCw } from "lucide-react";
 import { getTasa, guardarTasa, type EstadoTasa } from "@/lib/api";
 
 export default function TasaPage() {
@@ -50,44 +50,47 @@ export default function TasaPage() {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Tasa de cambio</h1>
-        <p className="text-sm text-fg-muted mt-1">
+      <header className="mb-7">
+        <h1 className="text-[26px] font-extrabold num-tight text-fg">Tasa de cambio</h1>
+        <p className="mt-1 text-[15px] font-medium text-fg-muted">
           Controla la tasa Bs/USD que el bot usa para cobrar. Se aplica al instante.
         </p>
       </header>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
           {error}
         </div>
       )}
 
       {estado === null ? (
-        <div className="space-y-4 max-w-2xl">
+        <div className="max-w-2xl space-y-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-32 rounded-2xl bg-bg border border-borde animate-pulse" />
+            <div key={i} className="h-32 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : (
-        <div className="space-y-6 max-w-2xl">
+        <div className="max-w-2xl space-y-6">
           {/* Tasa que se cobra hoy */}
-          <section className="bg-bg rounded-2xl border border-borde p-5 shadow-sm">
+          <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-[12px] font-medium text-fg-muted mb-1">Tasa que se cobra hoy</p>
-                <p className="text-[32px] leading-none font-semibold tracking-tight text-accent tnum">
-                  Bs {fmt(estado.tasa_efectiva)}
-                </p>
-                <p className="text-[12px] text-fg-muted mt-1.5">por cada $1</p>
+                <p className="mb-1 text-sm font-semibold text-fg-muted">Tasa que se cobra hoy</p>
+                <p className="text-4xl font-extrabold num-tight text-fg tnum">Bs {fmt(estado.tasa_efectiva)}</p>
+                <p className="mt-1.5 text-sm font-medium text-fg-muted">por cada $1</p>
               </div>
               <div className="text-right">
-                <p className="text-[12px] text-fg-muted">BCV de referencia</p>
-                <p className="text-base font-medium text-fg tnum">Bs {fmt(estado.bcv_base)}</p>
-                {estado.manual_activa && (
-                  <span className="inline-flex items-center gap-1 mt-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                <p className="text-xs font-medium text-fg-muted">BCV de referencia</p>
+                <p className="text-base font-bold text-fg tnum">Bs {fmt(estado.bcv_base)}</p>
+                {estado.manual_activa ? (
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border">
                     <Lock className="h-3 w-3" strokeWidth={2} />
                     Candado activo
+                  </span>
+                ) : (
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                    <RefreshCw className="h-3 w-3" strokeWidth={2} />
+                    Automática
                   </span>
                 )}
               </div>
@@ -95,15 +98,16 @@ export default function TasaPage() {
           </section>
 
           {/* Margen */}
-          <section className="bg-bg rounded-2xl border border-borde p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-fg mb-1">Tu margen</h2>
-            <p className="text-[12px] text-fg-muted mb-4 leading-relaxed">
-              Un porcentaje que se <span className="font-medium text-fg">suma</span> a la tasa BCV (ej. 2%
+          <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+            <h2 className="mb-1 text-lg font-semibold num-snug text-fg">Tu margen</h2>
+            <p className="mb-4 text-sm font-medium leading-relaxed text-fg-muted">
+              Un porcentaje que se <span className="font-semibold text-fg">suma</span> a la tasa BCV (ej. 2%
               para cubrir comisiones). Déjalo en 0 para cobrar la tasa BCV exacta.
             </p>
-            <div className="flex items-center gap-2 max-w-[200px]">
+            <div className="flex max-w-[200px] items-center gap-2">
               <input
                 className={inputCls}
+                aria-label="Margen en porcentaje"
                 type="number"
                 step="0.1"
                 min="0"
@@ -114,20 +118,20 @@ export default function TasaPage() {
                 }}
                 placeholder="0"
               />
-              <span className="text-sm text-fg-muted">%</span>
+              <span className="text-sm font-medium text-fg-muted">%</span>
             </div>
           </section>
 
           {/* Candado manual */}
-          <section className="bg-bg rounded-2xl border border-borde p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-fg mb-1">Candado manual</h2>
-            <p className="text-[12px] text-fg-muted mb-4 leading-relaxed">
+          <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+            <h2 className="mb-1 text-lg font-semibold num-snug text-fg">Candado manual</h2>
+            <p className="mb-4 text-sm font-medium leading-relaxed text-fg-muted">
               Si la fuente de la tasa falla, o quieres fijar la tasa a mano, actívalo y pon el valor exacto.
-              El bot usará <span className="font-medium text-fg">ese número</span> (ignora el BCV y el margen)
+              El bot usará <span className="font-semibold text-fg">ese número</span> (ignora el BCV y el margen)
               hasta que lo desactives.
             </p>
 
-            <label className="flex items-center gap-2.5 text-sm text-fg cursor-pointer mb-3">
+            <label className="mb-3 flex cursor-pointer items-center gap-2.5 text-sm font-medium text-fg">
               <input
                 type="checkbox"
                 checked={manualActiva}
@@ -135,15 +139,16 @@ export default function TasaPage() {
                   setManualActiva(e.target.checked);
                   setGuardado(false);
                 }}
-                className="h-4 w-4 rounded"
+                className="h-4 w-4 rounded accent-accent"
               />
               Usar tasa manual (candado activado)
             </label>
 
-            <div className="flex items-center gap-2 max-w-[260px]">
-              <span className="text-sm text-fg-muted">Bs</span>
+            <div className="flex max-w-[260px] items-center gap-2">
+              <span className="text-sm font-medium text-fg-muted">Bs</span>
               <input
                 className={`${inputCls} ${manualActiva ? "" : "opacity-50"}`}
+                aria-label="Tasa manual en bolívares por dólar"
                 type="number"
                 step="0.01"
                 min="0"
@@ -154,7 +159,7 @@ export default function TasaPage() {
                 }}
                 placeholder="Ej. 40.50"
               />
-              <span className="text-sm text-fg-muted whitespace-nowrap">/ $1</span>
+              <span className="whitespace-nowrap text-sm font-medium text-fg-muted">/ $1</span>
             </div>
           </section>
 
@@ -162,12 +167,12 @@ export default function TasaPage() {
             <button
               onClick={guardar}
               disabled={guardando}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent text-white text-sm font-medium px-5 py-2.5 hover:opacity-90 transition-opacity disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar cambios"}
             </button>
             {guardado && !guardando && (
-              <span className="inline-flex items-center gap-1.5 text-sm text-green-700">
+              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
                 <Check className="h-4 w-4" strokeWidth={2} />
                 Guardado
               </span>
@@ -180,4 +185,4 @@ export default function TasaPage() {
 }
 
 const inputCls =
-  "w-full rounded-lg border border-borde bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent";
+  "focus-ring w-full rounded-xl bg-bg px-3 py-2 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint";

@@ -60,7 +60,7 @@ function hora(fecha: string): string {
 // ─── Estilos de estado de pedido (paleta calmada) ───────────────────────
 const ESTADO: Record<string, { cls: string; dot: string }> = {
   pendiente: { cls: "bg-warn-bg text-warn ring-warn-border", dot: "bg-warn" },
-  confirmado: { cls: "bg-accent/10 text-accent ring-accent/20", dot: "bg-accent" },
+  confirmado: { cls: "bg-accent/10 text-accent ring-accent/15", dot: "bg-accent" },
   preparando: { cls: "bg-bg-subtle text-fg-muted ring-borde", dot: "bg-fg-faint" },
   entregado: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-600/15", dot: "bg-emerald-500" },
   cancelado: { cls: "bg-red-50 text-red-700 ring-red-600/15", dot: "bg-red-500" },
