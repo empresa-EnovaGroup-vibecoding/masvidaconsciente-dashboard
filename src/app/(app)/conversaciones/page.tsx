@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Bot } from "lucide-react";
 import {
   getConversaciones,
@@ -16,6 +16,8 @@ export default function ConversacionesPage() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [error, setError] = useState("");
   const [cambiandoPausa, setCambiandoPausa] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const prevLen = useRef(0);
 
   // Auto-refresco de la lista de conversaciones, casi en tiempo real (cada 7s).
   useEffect(() => {
@@ -44,8 +46,19 @@ export default function ConversacionesPage() {
     return () => { activo = false; clearInterval(id); };
   }, [activa]);
 
+  // Al abrir un chat o cuando entra un mensaje nuevo, baja solo al último (como WhatsApp).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el && mensajes.length !== prevLen.current) {
+      el.scrollTop = el.scrollHeight;
+      prevLen.current = mensajes.length;
+    }
+  }, [mensajes]);
+
   function abrir(telefono: string) {
     setActiva(telefono);
+    setMensajes([]);
+    prevLen.current = 0;
   }
 
   const convActiva = convs?.find((c) => c.telefono === activa) ?? null;
@@ -165,7 +178,8 @@ export default function ConversacionesPage() {
                   </div>
                 )}
 
-                <div className="space-y-2.5">
+                <div ref={scrollRef} className="max-h-[60vh] overflow-y-auto pr-1">
+                  <div className="space-y-2.5">
                   {mensajes.map((m, i) => (
                     <div key={i} className={`flex ${m.rol === "assistant" ? "justify-end" : "justify-start"}`}>
                       <div
@@ -179,6 +193,7 @@ export default function ConversacionesPage() {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               </div>
             ) : (
