@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getReporte, type Reporte, type ReportePeriodo } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
+import { ErrorBanner } from "@/components/error-banner";
 
 const PERIODOS: { clave: keyof Reporte; titulo: string; sub: string }[] = [
   { clave: "hoy", titulo: "Hoy", sub: "Desde las 12:00 a.m." },
@@ -27,11 +28,7 @@ export default function ReportePage() {
         </p>
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       <div className="space-y-4">
         {PERIODOS.map(({ clave, titulo, sub }) => (

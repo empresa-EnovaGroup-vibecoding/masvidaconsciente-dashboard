@@ -5,6 +5,7 @@ import { ShoppingBag } from "lucide-react";
 import { getPedidos, cambiarEstadoPedido, type Pedido } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
 import { estiloEstado, ESTADOS_PEDIDO_MANUALES } from "@/lib/estados";
+import { ErrorBanner } from "@/components/error-banner";
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[] | null>(null);
@@ -27,11 +28,7 @@ export default function PedidosPage() {
         <p className="mt-1 text-[15px] font-medium text-fg-muted">Todos los pedidos de tus clientes</p>
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {pedidos === null ? (
         <div className="space-y-3">

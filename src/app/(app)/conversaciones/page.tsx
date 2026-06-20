@@ -10,6 +10,7 @@ import {
   type Conversacion,
   type Mensaje,
 } from "@/lib/api";
+import { ErrorBanner } from "@/components/error-banner";
 
 export default function ConversacionesPage() {
   const [convs, setConvs] = useState<Conversacion[] | null>(null);
@@ -108,11 +109,7 @@ export default function ConversacionesPage() {
         <p className="mt-1 text-[15px] font-medium text-fg-muted">Los chats de WhatsApp con tus clientes</p>
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {convs === null ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

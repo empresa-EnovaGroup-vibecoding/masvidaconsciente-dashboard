@@ -27,6 +27,7 @@ import {
   type Pedido,
 } from "@/lib/api";
 import { estiloEstado } from "@/lib/estados";
+import { ErrorBanner } from "@/components/error-banner";
 
 // ─── Helpers de formato (Venezuela: punto de miles, coma decimal) ───────
 const fmt = (n: number) =>
@@ -171,11 +172,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {/* ── Tarjetas de métrica ──────────────────────────────────── */}
       <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">

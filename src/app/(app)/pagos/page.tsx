@@ -12,6 +12,7 @@ import {
   type EstadoPago,
 } from "@/lib/api";
 import { formatUSD, formatBs, formatTasa } from "@/lib/format";
+import { ErrorBanner } from "@/components/error-banner";
 
 const COLOR: Record<EstadoPago, string> = {
   reportado: "bg-warn-bg text-warn ring-warn-border",
@@ -138,11 +139,7 @@ export default function PagosPage() {
         </p>
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {pagos === null ? (
         <div className="space-y-3">

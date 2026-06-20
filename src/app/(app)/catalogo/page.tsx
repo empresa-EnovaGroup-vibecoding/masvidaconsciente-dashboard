@@ -13,6 +13,8 @@ import {
   type ProductoInput,
 } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
+import { ErrorBanner } from "@/components/error-banner";
+import { inputCls } from "@/lib/ui";
 
 const ORDEN = ["panaderia", "dulceria", "congelados", "artesanal", "harinas"];
 const TITULO: Record<string, string> = {
@@ -227,11 +229,7 @@ export default function CatalogoPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {productos === null ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -426,9 +424,6 @@ export default function CatalogoPage() {
     </div>
   );
 }
-
-const inputCls =
-  "focus-ring w-full rounded-xl bg-bg px-3 py-2 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint";
 
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (

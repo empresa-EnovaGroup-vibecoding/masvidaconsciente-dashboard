@@ -10,6 +10,8 @@ import {
   type Conocimiento,
   type ConocimientoInput,
 } from "@/lib/api";
+import { ErrorBanner } from "@/components/error-banner";
+import { inputCls } from "@/lib/ui";
 
 const CATEGORIAS = [
   { key: "faq", label: "Preguntas frecuentes" },
@@ -99,11 +101,7 @@ export default function ConocimientoPage() {
         </button>
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {items === null ? (
         <div className="space-y-3">
@@ -257,6 +255,3 @@ export default function ConocimientoPage() {
     </div>
   );
 }
-
-const inputCls =
-  "focus-ring w-full rounded-xl bg-bg px-3 py-2 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint";

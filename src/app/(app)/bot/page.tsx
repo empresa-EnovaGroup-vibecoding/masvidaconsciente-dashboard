@@ -9,6 +9,7 @@ import {
   getBotEstado,
   guardarBotEstado,
 } from "@/lib/api";
+import { ErrorBanner } from "@/components/error-banner";
 
 type MsgSim = { rol: "user" | "assistant"; texto: string };
 
@@ -140,11 +141,7 @@ export default function BotPage() {
             Escribe en tus palabras cómo debe ser tu asistente: su tono, qué resaltar, cómo cerrar la venta.
           </p>
 
-          {errorP && (
-            <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-              {errorP}
-            </div>
-          )}
+          <ErrorBanner mensaje={errorP} className="mb-4" />
 
           {texto === null ? (
             <div className="h-72 animate-pulse rounded-xl bg-bg-subtle ring-hair" />
@@ -249,11 +246,7 @@ export default function BotPage() {
             <div ref={finChat} />
           </div>
 
-          {errorS && (
-            <div className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-              {errorS}
-            </div>
-          )}
+          <ErrorBanner mensaje={errorS} className="mt-3" />
 
           <div className="mt-3 flex items-center gap-2">
             <input

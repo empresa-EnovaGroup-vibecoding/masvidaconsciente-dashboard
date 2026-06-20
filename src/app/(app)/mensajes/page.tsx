@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
+import { ErrorBanner } from "@/components/error-banner";
 import { getGuiasMensajes, guardarGuiasMensajes, type GuiasMensajes } from "@/lib/api";
 
 const CAMPOS: { key: keyof GuiasMensajes; label: string; help: string }[] = [
@@ -70,11 +71,7 @@ export default function MensajesPage() {
         </p>
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {datos === null ? (
         <div className="max-w-2xl space-y-4">

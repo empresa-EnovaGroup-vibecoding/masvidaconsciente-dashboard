@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
 import { estiloEstado } from "@/lib/estados";
+import { ErrorBanner } from "@/components/error-banner";
 
 const fecha = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("es-VE", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -70,11 +71,7 @@ export default function ClientesPage() {
         </p>
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {clientes === null ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

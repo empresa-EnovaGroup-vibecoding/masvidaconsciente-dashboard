@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 import { Check } from "lucide-react";
 import {
   getConfiguracion,
   guardarConfiguracion,
   type ConfiguracionNegocio,
 } from "@/lib/api";
+import { ErrorBanner } from "@/components/error-banner";
+import { inputCls } from "@/lib/ui";
 
 const VACIO: ConfiguracionNegocio = {
   negocio_nombre: "",
@@ -78,11 +80,7 @@ export default function ConfiguracionPage() {
         </p>
       </header>
 
-      {error && (
-        <div className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-600/15">
-          {error}
-        </div>
-      )}
+      <ErrorBanner mensaje={error} />
 
       {datos === null ? (
         <div className="max-w-2xl space-y-4">
@@ -188,9 +186,6 @@ export default function ConfiguracionPage() {
   );
 }
 
-const inputCls =
-  "focus-ring w-full rounded-xl bg-bg px-3 py-2 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint";
-
 function Seccion({
   titulo,
   nota,
@@ -209,11 +204,14 @@ function Seccion({
   );
 }
 
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+function Campo({ label, children }: { label: string; children: React.ReactElement<{ id?: string }> }) {
+  const id = useId();
   return (
     <div>
-      <label className="mb-1 block text-[13px] font-medium text-fg-muted">{label}</label>
-      {children}
+      <label htmlFor={id} className="mb-1 block text-[13px] font-medium text-fg-muted">
+        {label}
+      </label>
+      {React.cloneElement(children, { id })}
     </div>
   );
 }
