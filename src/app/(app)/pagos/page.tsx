@@ -171,7 +171,7 @@ export default function PagosPage() {
   return (
     <div>
       <header className="mb-7">
-        <h1 className="text-[26px] font-extrabold num-tight text-fg">Pagos</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Pagos</h1>
         <p className="mt-1 text-[15px] font-medium text-fg-muted">
           Verifica los comprobantes y confirma los pagos de tus clientes
         </p>
@@ -212,7 +212,7 @@ export default function PagosPage() {
       ) : (
         <div className="space-y-3">
           {pagos.map((p) => (
-            <div key={p.id} className="rounded-2xl bg-bg p-5 shadow-card ring-hair">
+            <div key={p.id} className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">

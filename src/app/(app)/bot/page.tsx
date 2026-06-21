@@ -105,14 +105,14 @@ export default function BotPage() {
   return (
     <div>
       <header className="mb-7">
-        <h1 className="text-[26px] font-extrabold num-tight text-fg">Mi Bot</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Mi Bot</h1>
         <p className="mt-1 text-[15px] font-medium text-fg-muted">
           Ajusta cómo habla tu asistente y pruébalo en vivo, sin gastar WhatsApp.
         </p>
       </header>
 
       {/* Interruptor del bot */}
-      <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl bg-bg p-5 shadow-card ring-hair">
+      <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl bg-bg p-6 shadow-card ring-hair">
         <div className="flex items-center gap-3">
           <span
             className={`h-2.5 w-2.5 rounded-full ${

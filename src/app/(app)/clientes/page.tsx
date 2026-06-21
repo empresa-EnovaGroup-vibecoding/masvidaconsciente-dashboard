@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Search, Check } from "lucide-react";
+import { Users, Search, Check, DollarSign, ShoppingBag } from "lucide-react";
 import {
   getClientes,
   getCliente,
@@ -78,7 +78,7 @@ export default function ClientesPage() {
   return (
     <div>
       <header className="mb-7">
-        <h1 className="text-[26px] font-extrabold num-tight text-fg">Clientes</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Clientes</h1>
         <p className="mt-1 text-[15px] font-medium text-fg-muted">
           Tu gente: cuánto compran y notas para atenderlos mejor
         </p>
@@ -110,7 +110,7 @@ export default function ClientesPage() {
           <div className="space-y-2">
             <div className="relative">
               <Search
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-faint"
+                className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-faint"
                 strokeWidth={1.8}
               />
               <input
@@ -118,7 +118,7 @@ export default function ClientesPage() {
                 onChange={(e) => setBusqueda(e.target.value)}
                 aria-label="Buscar cliente por nombre o teléfono"
                 placeholder="Buscar por nombre o teléfono"
-                className="focus-ring w-full rounded-xl bg-bg py-2 pl-9 pr-3 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint"
+                className="focus-ring w-full rounded-xl bg-bg py-2.5 pl-10 pr-3 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint"
               />
             </div>
             <div className="max-h-[520px] space-y-1.5 overflow-y-auto">
@@ -136,14 +136,14 @@ export default function ClientesPage() {
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
                       {(c.nombre || c.telefono).charAt(0).toUpperCase()}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 leading-tight">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-fg">{c.nombre || c.telefono}</p>
-                        <span className="shrink-0 text-[13px] font-bold text-accent tnum num-snug">
+                        <p className="truncate font-bold text-fg">{c.nombre || c.telefono}</p>
+                        <span className="shrink-0 font-bold text-accent tnum num-snug">
                           {formatUSD(c.total_gastado_usd)}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-xs font-medium text-fg-muted tnum">
+                      <p className="mt-0.5 text-[13px] font-medium text-fg-muted tnum">
                         {c.num_pedidos} {c.num_pedidos === 1 ? "pedido" : "pedidos"} · última{" "}
                         {formatFecha(c.ultima_compra)}
                       </p>
@@ -174,32 +174,42 @@ export default function ClientesPage() {
               </div>
             ) : (
               <div>
-                <div className="mb-5 flex items-start justify-between gap-3">
+                <div className="mb-6 flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent/10 text-base font-bold text-accent ring-1 ring-accent/15">
                       {(detalle.nombre || "?").charAt(0).toUpperCase()}
                     </div>
-                    <div>
+                    <div className="leading-tight">
                       <h2 className="text-lg font-semibold num-snug text-fg">{detalle.nombre || "Cliente"}</h2>
-                      <p className="text-[13px] font-medium text-fg-muted tnum">{detalle.telefono}</p>
+                      <p className="mt-0.5 text-[13px] font-medium text-fg-muted tnum">{detalle.telefono}</p>
                     </div>
                   </div>
-                  <p className="text-xs font-medium text-fg-muted">
+                  <p className="text-xs font-medium text-fg-faint">
                     Cliente desde {formatFecha(detalle.primera_interaccion)}
                   </p>
                 </div>
 
                 {/* Stats */}
-                <div className="mb-5 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-bg-subtle/60 p-4 ring-hair">
-                    <p className="text-xs font-medium text-fg-muted">Total gastado</p>
-                    <p className="mt-0.5 text-2xl font-extrabold num-snug text-accent tnum">
+                <div className="mb-6 grid grid-cols-2 gap-4">
+                  <div className="rounded-2xl bg-bg-subtle/60 p-4 ring-hair">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-fg-muted">Total gastado</p>
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                        <DollarSign className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </span>
+                    </div>
+                    <p className="mt-2 text-3xl font-extrabold num-tight text-accent tnum">
                       {formatUSD(detalle.total_gastado_usd)}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-bg-subtle/60 p-4 ring-hair">
-                    <p className="text-xs font-medium text-fg-muted">Pedidos</p>
-                    <p className="mt-0.5 text-2xl font-extrabold num-snug text-fg tnum">{detalle.num_pedidos}</p>
+                  <div className="rounded-2xl bg-bg-subtle/60 p-4 ring-hair">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-fg-muted">Pedidos</p>
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bg-subtle text-fg-faint">
+                        <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </span>
+                    </div>
+                    <p className="mt-2 text-3xl font-extrabold num-tight text-fg tnum">{detalle.num_pedidos}</p>
                   </div>
                 </div>
 
@@ -224,7 +234,7 @@ export default function ClientesPage() {
                     <button
                       onClick={guardarNotas}
                       disabled={guardando}
-                      className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+                      className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
                     >
                       {guardando ? "Guardando…" : "Guardar nota"}
                     </button>
@@ -237,27 +247,25 @@ export default function ClientesPage() {
                 </div>
 
                 {/* Historial */}
-                <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
-                  Historial de pedidos
-                </h3>
+                <h3 className="mb-3 text-lg font-semibold num-snug text-fg">Historial de pedidos</h3>
                 {detalle.pedidos.length === 0 ? (
                   <p className="text-[13px] font-medium text-fg-muted">Todavía no ha hecho pedidos.</p>
                 ) : (
                   <div className="space-y-2">
                     {detalle.pedidos.map((p) => (
-                      <div key={p.id} className="rounded-xl bg-bg p-4 ring-hair">
+                      <div key={p.id} className="rounded-2xl bg-bg p-4 ring-hair transition-colors hover:bg-bg-subtle/50">
                         <div className="flex items-baseline justify-between gap-2">
-                          <p className="text-[13px] font-semibold text-fg tnum">Pedido #{p.id}</p>
-                          <span className="text-[13px] font-bold text-fg tnum num-snug">
+                          <p className="font-bold text-fg tnum">Pedido #{p.id}</p>
+                          <span className="font-bold text-fg tnum num-snug">
                             {formatUSD(p.total_usd)}
                           </span>
                         </div>
                         <div className="mt-1.5 flex items-center gap-2">
-                          <span className="text-xs font-medium text-fg-muted">{formatFecha(p.fecha)}</span>
+                          <span className="text-[13px] font-medium text-fg-muted">{formatFecha(p.fecha)}</span>
                           <EstadoBadge estado={p.estado} />
                         </div>
                         {p.items && p.items.length > 0 && (
-                          <p className="mt-1.5 truncate text-xs font-medium text-fg-muted">
+                          <p className="mt-1.5 truncate text-[13px] font-medium text-fg-muted">
                             {p.items.map((it) => `${it.cantidad}× ${it.producto}`).join(", ")}
                           </p>
                         )}

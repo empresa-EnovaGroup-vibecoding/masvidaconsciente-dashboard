@@ -121,7 +121,7 @@ export default function ConfiguracionPage() {
   return (
     <div>
       <header className="mb-7">
-        <h1 className="text-[26px] font-extrabold num-tight text-fg">Configuración del negocio</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Configuración del negocio</h1>
         <p className="mt-1 text-[15px] font-medium text-fg-muted">
           Los datos que el bot usa para atender y cobrar. Se aplican al instante.
         </p>
@@ -220,7 +220,7 @@ export default function ConfiguracionPage() {
             <button
               onClick={guardar}
               disabled={guardando}
-              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar cambios"}
             </button>

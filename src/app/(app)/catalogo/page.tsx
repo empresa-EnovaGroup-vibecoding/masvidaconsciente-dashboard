@@ -209,16 +209,16 @@ export default function CatalogoPage() {
 
   return (
     <div>
-      <header className="mb-7 flex items-start justify-between gap-4">
+      <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[26px] font-extrabold num-tight text-fg">Catálogo</h1>
+          <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Catálogo</h1>
           <p className="mt-1 text-[15px] font-medium text-fg-muted">
             Los productos que el bot ofrece a tus clientes
           </p>
         </div>
         <button
           onClick={abrirNuevo}
-          className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+          className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
           Nuevo producto
@@ -226,7 +226,7 @@ export default function CatalogoPage() {
       </header>
 
       {/* Catálogo en PDF (el folleto que el bot envía) */}
-      <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl bg-bg p-5 shadow-card ring-hair">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-bg p-6 shadow-card ring-hair">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent ring-1 ring-accent/15">
             <FileText className="h-5 w-5" strokeWidth={1.8} />
@@ -277,7 +277,7 @@ export default function CatalogoPage() {
       {error && productos === null ? (
         <ErrorState mensaje={error} onRetry={recargar} />
       ) : productos === null ? (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-28 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
@@ -291,21 +291,21 @@ export default function CatalogoPage() {
       ) : (
         categorias.map((cat) => (
           <section key={cat} className="mb-10">
-            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+            <h2 className="mb-3 text-lg font-semibold num-snug text-fg">
               {TITULO[cat] || cat}
             </h2>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {productos
                 .filter((p) => (p.categoria || "otros") === cat)
                 .map((p) => (
                   <div
                     key={p.id}
-                    className={`rounded-2xl bg-bg p-5 shadow-card ring-hair transition ${
+                    className={`rounded-2xl bg-bg p-6 shadow-card ring-hair transition ${
                       p.disponible ? "" : "opacity-60"
                     }`}
                   >
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-sm font-semibold text-fg">{p.nombre}</p>
+                      <p className="font-bold text-fg">{p.nombre}</p>
                       <span className="shrink-0 text-sm font-bold text-accent num-snug tnum">
                         {p.precio !== null ? formatUSD(p.precio) : "consultar"}
                       </span>

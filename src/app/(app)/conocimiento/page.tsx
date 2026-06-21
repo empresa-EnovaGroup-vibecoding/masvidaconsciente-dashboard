@@ -98,16 +98,16 @@ export default function ConocimientoPage() {
 
   return (
     <div>
-      <header className="mb-7 flex items-start justify-between gap-4">
+      <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[26px] font-extrabold num-tight text-fg">Conocimiento del negocio</h1>
+          <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Conocimiento del negocio</h1>
           <p className="mt-1 text-[15px] font-medium text-fg-muted">
             Lo que el bot usa para responder dudas. Mientras más cargues aquí, menos improvisa.
           </p>
         </div>
         <button
           onClick={() => setForm({ ...FORM_VACIO })}
-          className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+          className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
         >
           <Plus className="h-4 w-4" strokeWidth={2} />
           Nueva entrada
@@ -132,51 +132,60 @@ export default function ConocimientoPage() {
         />
       ) : (
         categorias.map((cat) => (
-          <section key={cat.key} className="mb-8">
-            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
-              {cat.label}
-            </h2>
-            <div className="space-y-3">
+          <section
+            key={cat.key}
+            className="mb-6 overflow-hidden rounded-2xl bg-bg shadow-card ring-hair"
+          >
+            <div className="px-6 py-5">
+              <h2 className="text-lg font-semibold num-snug text-fg">{cat.label}</h2>
+            </div>
+            <ul className="divide-y divide-borde/60 border-t border-borde/60">
               {items
                 .filter((i) => (i.categoria || "faq") === cat.key)
                 .map((i) => (
-                  <div key={i.id} className="rounded-2xl bg-bg p-5 shadow-card ring-hair">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-fg">{i.titulo}</p>
+                  <li
+                    key={i.id}
+                    className="flex items-start justify-between gap-4 px-6 py-4 transition-colors hover:bg-bg-subtle/50"
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/15">
+                        <Lightbulb className="h-[18px] w-[18px]" strokeWidth={2} />
+                      </div>
+                      <div className="min-w-0 leading-tight">
+                        <p className="font-bold text-fg">{i.titulo}</p>
                         <p className="mt-1 whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-fg-muted">
                           {i.contenido}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <button
-                          onClick={() =>
-                            setForm({
-                              id: i.id,
-                              categoria: i.categoria || "faq",
-                              titulo: i.titulo,
-                              contenido: i.contenido,
-                            })
-                          }
-                          className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-bg-subtle hover:text-fg"
-                          title="Editar"
-                          aria-label="Editar"
-                        >
-                          <Pencil className="h-4 w-4" strokeWidth={1.8} />
-                        </button>
-                        <button
-                          onClick={() => borrar(i.id)}
-                          className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-red-50 hover:text-red-600"
-                          title="Borrar"
-                          aria-label="Borrar"
-                        >
-                          <Trash2 className="h-4 w-4" strokeWidth={1.8} />
-                        </button>
-                      </div>
                     </div>
-                  </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        onClick={() =>
+                          setForm({
+                            id: i.id,
+                            categoria: i.categoria || "faq",
+                            titulo: i.titulo,
+                            contenido: i.contenido,
+                          })
+                        }
+                        className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-bg-subtle hover:text-fg"
+                        title="Editar"
+                        aria-label="Editar"
+                      >
+                        <Pencil className="h-4 w-4" strokeWidth={1.8} />
+                      </button>
+                      <button
+                        onClick={() => borrar(i.id)}
+                        className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-red-50 hover:text-red-600"
+                        title="Borrar"
+                        aria-label="Borrar"
+                      >
+                        <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+                      </button>
+                    </div>
+                  </li>
                 ))}
-            </div>
+            </ul>
           </section>
         ))
       )}

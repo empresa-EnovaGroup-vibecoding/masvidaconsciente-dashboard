@@ -63,7 +63,7 @@ export default function TasaPage() {
   return (
     <div>
       <header className="mb-7">
-        <h1 className="text-[26px] font-extrabold num-tight text-fg">Tasa de cambio</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Tasa de cambio</h1>
         <p className="mt-1 text-[15px] font-medium text-fg-muted">
           Controla la tasa Bs/USD que el bot usa para cobrar. Se aplica al instante.
         </p>
@@ -82,7 +82,8 @@ export default function TasaPage() {
       ) : (
         <div className="max-w-2xl space-y-6">
           {/* Tasa que se cobra hoy */}
-          <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+          <section className="relative overflow-hidden rounded-2xl bg-bg p-6 shadow-card ring-hair">
+            <span className="absolute left-0 top-0 h-full w-1 bg-accent" />
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="mb-1 text-sm font-semibold text-fg-muted">Tasa que se cobra hoy</p>
@@ -183,7 +184,7 @@ export default function TasaPage() {
             <button
               onClick={guardar}
               disabled={guardando || bloqueoCandado}
-              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
             >
               {guardando ? "Guardando…" : "Guardar cambios"}
             </button>

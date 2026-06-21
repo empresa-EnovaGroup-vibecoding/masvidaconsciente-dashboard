@@ -112,7 +112,7 @@ export default function ConversacionesPage() {
   return (
     <div>
       <header className="mb-7">
-        <h1 className="text-[26px] font-extrabold num-tight text-fg">Conversaciones</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Conversaciones</h1>
         <p className="mt-1 text-[15px] font-medium text-fg-muted">Los chats de WhatsApp con tus clientes</p>
       </header>
 
@@ -121,11 +121,15 @@ export default function ConversacionesPage() {
       {error && convs === null ? (
         <ErrorState mensaje={error} onRetry={cargar} />
       ) : convs === null ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
-            ))}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div className="overflow-hidden rounded-2xl bg-bg shadow-card ring-hair">
+            <ul className="divide-y divide-borde/60">
+              {[0, 1, 2, 3].map((i) => (
+                <li key={i} className="px-6 py-4">
+                  <div className="h-9 w-full animate-pulse rounded-md bg-bg-subtle" />
+                </li>
+              ))}
+            </ul>
           </div>
           <div className="h-[420px] animate-pulse rounded-2xl bg-bg shadow-card ring-hair md:col-span-2" />
         </div>
@@ -136,47 +140,49 @@ export default function ConversacionesPage() {
           texto="Aparecerán cuando los clientes escriban por WhatsApp."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            {convs.map((c) => {
-              const seleccionada = activa === c.telefono;
-              return (
-                <button
-                  key={c.telefono}
-                  onClick={() => abrir(c.telefono)}
-                  className={`focus-ring w-full rounded-2xl bg-bg p-3 text-left shadow-card ring-hair transition hover:bg-bg-subtle/60 ${
-                    seleccionada ? "ring-1 ring-accent/30" : ""
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
-                      {(c.nombre || c.telefono || "?").charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-fg">{c.nombre || c.telefono}</p>
-                      <p className="mt-0.5 truncate text-[13px] font-medium text-fg-muted">{c.ultimo_mensaje || "—"}</p>
-                    </div>
-                    {c.bot_pausado && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-[11px] font-semibold text-warn ring-1 ring-inset ring-warn-border">
-                        <Bot className="h-3 w-3" strokeWidth={2} />
-                        Pausado
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+          <div className="overflow-hidden rounded-2xl bg-bg shadow-card ring-hair">
+            <ul className="divide-y divide-borde/60">
+              {convs.map((c) => {
+                const seleccionada = activa === c.telefono;
+                return (
+                  <li key={c.telefono} className="relative overflow-hidden">
+                    {seleccionada && <span className="absolute left-0 top-0 h-full w-1 bg-accent" />}
+                    <button
+                      onClick={() => abrir(c.telefono)}
+                      className={`focus-ring flex w-full items-center gap-4 px-6 py-4 text-left transition-colors ${
+                        seleccionada ? "bg-bg-subtle/50" : "hover:bg-bg-subtle/50"
+                      }`}
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
+                        {(c.nombre || c.telefono || "?").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <p className="truncate font-bold text-fg">{c.nombre || c.telefono}</p>
+                        <p className="mt-0.5 truncate text-[13px] font-medium text-fg-muted">{c.ultimo_mensaje || "—"}</p>
+                      </div>
+                      {c.bot_pausado && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-[11px] font-semibold text-warn ring-1 ring-inset ring-warn-border">
+                          <Bot className="h-3 w-3" strokeWidth={2} />
+                          Pausado
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
-          <div className="min-h-[420px] rounded-2xl bg-bg p-5 shadow-card ring-hair md:col-span-2">
+          <div className="min-h-[420px] rounded-2xl bg-bg p-6 shadow-card ring-hair md:col-span-2">
             {activa ? (
               <div>
-                <div className="mb-4 flex items-center justify-between gap-2 border-b border-borde/70 pb-4">
+                <div className="mb-4 flex items-center justify-between gap-2 border-b border-borde/60 pb-4">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
                       {(convActiva?.nombre || activa || "?").charAt(0).toUpperCase()}
                     </div>
-                    <p className="truncate text-sm font-semibold text-fg">
+                    <p className="truncate font-bold text-fg">
                       {convActiva?.nombre || activa}
                     </p>
                   </div>
@@ -184,7 +190,7 @@ export default function ConversacionesPage() {
                     <button
                       onClick={togglePausa}
                       disabled={cambiandoPausa}
-                      className={`focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
+                      className={`focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${
                         convActiva?.bot_pausado
                           ? "bg-accent text-accent-fg hover:bg-accent-soft"
                           : "bg-bg text-fg ring-1 ring-borde hover:bg-bg-subtle"
@@ -201,7 +207,7 @@ export default function ConversacionesPage() {
                       onClick={borrarChat}
                       disabled={borrando}
                       title="Borrar este chat"
-                      className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 disabled:opacity-50"
+                      className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 disabled:opacity-50"
                     >
                       <Trash2 className="h-4 w-4" strokeWidth={1.8} />
                       {borrando ? "Borrando…" : "Borrar"}
