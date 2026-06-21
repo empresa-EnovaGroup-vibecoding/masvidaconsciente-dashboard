@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getReporte, type Reporte, type ReportePeriodo } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
 
 const PERIODOS: { clave: keyof Reporte; titulo: string; sub: string }[] = [
   { clave: "hoy", titulo: "Hoy", sub: "Desde las 12:00 a.m." },
@@ -15,8 +16,13 @@ export default function ReportePage() {
   const [rep, setRep] = useState<Reporte | null>(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  function cargar() {
+    setError("");
     getReporte().then(setRep).catch((e) => setError(e.message));
+  }
+
+  useEffect(() => {
+    cargar();
   }, []);
 
   return (
@@ -28,13 +34,19 @@ export default function ReportePage() {
         </p>
       </header>
 
-      <ErrorBanner mensaje={error} />
+      {error && rep === null ? (
+        <ErrorState mensaje={error} onRetry={cargar} />
+      ) : (
+        <>
+          <ErrorBanner mensaje={error} />
 
-      <div className="space-y-4">
-        {PERIODOS.map(({ clave, titulo, sub }) => (
-          <Tarjeta key={clave} titulo={titulo} sub={sub} datos={rep ? rep[clave] : null} />
-        ))}
-      </div>
+          <div className="space-y-4">
+            {PERIODOS.map(({ clave, titulo, sub }) => (
+              <Tarjeta key={clave} titulo={titulo} sub={sub} datos={rep ? rep[clave] : null} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

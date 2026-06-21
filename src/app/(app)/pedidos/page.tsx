@@ -11,6 +11,9 @@ import {
 import { formatUSD } from "@/lib/format";
 import { estiloEstado, ESTADOS_PEDIDO_MANUALES } from "@/lib/estados";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
+import { EstadoBadge } from "@/components/estado-badge";
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[] | null>(null);
@@ -19,6 +22,7 @@ export default function PedidosPage() {
   const [ocupado, setOcupado] = useState<number | null>(null);
 
   function cargar() {
+    setError("");
     getPedidos().then(setPedidos).catch((e) => setError(e.message));
   }
   useEffect(() => {
@@ -70,24 +74,22 @@ export default function PedidosPage() {
         <p className="mt-1 text-[15px] font-medium text-fg-muted">Todos los pedidos de tus clientes</p>
       </header>
 
-      <ErrorBanner mensaje={error} />
+      {pedidos !== null && <ErrorBanner mensaje={error} />}
 
-      {pedidos === null ? (
+      {error && pedidos === null ? (
+        <ErrorState mensaje={error} onRetry={cargar} />
+      ) : pedidos === null ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-28 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : pedidos.length === 0 ? (
-        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
-          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-            <ShoppingBag className="h-5 w-5" strokeWidth={1.8} />
-          </div>
-          <p className="text-sm font-semibold text-fg">Aún no hay pedidos</p>
-          <p className="mt-1 text-sm font-medium text-fg-muted">
-            Cuando un cliente ordene por WhatsApp, aparecerá aquí.
-          </p>
-        </div>
+        <EmptyState
+          icon={ShoppingBag}
+          titulo="Aún no hay pedidos"
+          texto="Cuando un cliente ordene por WhatsApp, aparecerá aquí."
+        />
       ) : (
         <div className="space-y-3">
           {pedidos.map((p) => {
@@ -126,12 +128,9 @@ export default function PedidosPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-extrabold num-snug text-fg tnum">{formatUSD(p.total_usd)}</p>
-                    <span
-                      className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${est.cls}`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${est.dot}`} />
-                      {est.label}
-                    </span>
+                    <div className="mt-1">
+                      <EstadoBadge estado={p.estado} />
+                    </div>
                   </div>
                 </div>
 

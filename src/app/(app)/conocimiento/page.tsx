@@ -11,6 +11,8 @@ import {
   type ConocimientoInput,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { inputCls } from "@/lib/ui";
 
 const CATEGORIAS = [
@@ -33,6 +35,7 @@ export default function ConocimientoPage() {
   const [guardando, setGuardando] = useState(false);
 
   function recargar() {
+    setError("");
     getConocimiento()
       .then((d) => {
         setItems(d);
@@ -41,6 +44,16 @@ export default function ConocimientoPage() {
       .catch((e) => setError(e.message));
   }
   useEffect(recargar, []);
+
+  // Cerrar el modal con la tecla Escape (no cierra mientras guarda).
+  useEffect(() => {
+    if (!form) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !guardando) setForm(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [form, guardando]);
 
   const categorias = items
     ? CATEGORIAS.filter((c) => items.some((i) => (i.categoria || "faq") === c.key)).concat(
@@ -101,24 +114,22 @@ export default function ConocimientoPage() {
         </button>
       </header>
 
-      <ErrorBanner mensaje={error} />
+      {items !== null && <ErrorBanner mensaje={error} />}
 
-      {items === null ? (
+      {items === null && error ? (
+        <ErrorState mensaje={error} onRetry={recargar} />
+      ) : items === null ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-20 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
-          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-            <Lightbulb className="h-5 w-5" strokeWidth={1.8} />
-          </div>
-          <p className="text-sm font-semibold text-fg">Aún no hay información cargada</p>
-          <p className="mt-1 text-sm font-medium text-fg-muted">
-            Agrega lo que tus clientes preguntan seguido: ingredientes, horarios, envíos…
-          </p>
-        </div>
+        <EmptyState
+          icon={Lightbulb}
+          titulo="Aún no hay información cargada"
+          texto="Agrega lo que tus clientes preguntan seguido: ingredientes, horarios, envíos…"
+        />
       ) : (
         categorias.map((cat) => (
           <section key={cat.key} className="mb-8">
@@ -176,11 +187,14 @@ export default function ConocimientoPage() {
           onClick={() => !guardando && setForm(null)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="conocimiento-modal-titulo"
             className="w-full max-w-md rounded-2xl bg-bg p-6 shadow-soft ring-hair"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-lg font-semibold num-snug text-fg">
+              <h3 id="conocimiento-modal-titulo" className="text-lg font-semibold num-snug text-fg">
                 {form.id ? "Editar entrada" : "Nueva entrada"}
               </h3>
               <button
@@ -194,8 +208,14 @@ export default function ConocimientoPage() {
 
             <div className="space-y-3.5">
               <div>
-                <label className="mb-1 block text-[12px] font-semibold text-fg-muted">Categoría</label>
+                <label
+                  htmlFor="conocimiento-categoria"
+                  className="mb-1 block text-[12px] font-semibold text-fg-muted"
+                >
+                  Categoría
+                </label>
                 <select
+                  id="conocimiento-categoria"
                   className={inputCls}
                   value={form.categoria}
                   onChange={(e) => setForm({ ...form, categoria: e.target.value })}
@@ -211,10 +231,14 @@ export default function ConocimientoPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[12px] font-semibold text-fg-muted">
+                <label
+                  htmlFor="conocimiento-titulo"
+                  className="mb-1 block text-[12px] font-semibold text-fg-muted"
+                >
                   Pregunta o título
                 </label>
                 <input
+                  id="conocimiento-titulo"
                   className={inputCls}
                   value={form.titulo}
                   onChange={(e) => setForm({ ...form, titulo: e.target.value })}
@@ -222,8 +246,14 @@ export default function ConocimientoPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[12px] font-semibold text-fg-muted">Respuesta</label>
+                <label
+                  htmlFor="conocimiento-contenido"
+                  className="mb-1 block text-[12px] font-semibold text-fg-muted"
+                >
+                  Respuesta
+                </label>
                 <textarea
+                  id="conocimiento-contenido"
                   className={`${inputCls} resize-y`}
                   rows={4}
                   value={form.contenido}

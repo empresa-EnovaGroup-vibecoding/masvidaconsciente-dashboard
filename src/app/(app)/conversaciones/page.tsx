@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MessageCircle, Bot, Trash2 } from "lucide-react";
 import {
   getConversaciones,
@@ -11,43 +11,49 @@ import {
   type Mensaje,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 export default function ConversacionesPage() {
   const [convs, setConvs] = useState<Conversacion[] | null>(null);
   const [activa, setActiva] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [error, setError] = useState("");
+  const [errorHilo, setErrorHilo] = useState("");
   const [cambiandoPausa, setCambiandoPausa] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLen = useRef(0);
 
+  // Carga la lista de conversaciones (reutilizable: efecto + botón Reintentar).
+  const cargar = useCallback(() => {
+    getConversaciones()
+      .then((c) => { setConvs(c); setError(""); })
+      .catch((e) => { setError((e as Error).message); });
+  }, []);
+
   // Auto-refresco de la lista de conversaciones, casi en tiempo real (cada 7s).
   useEffect(() => {
-    let activo = true;
-    const cargar = () => {
-      getConversaciones()
-        .then((c) => { if (activo) setConvs(c); })
-        .catch((e) => { if (activo) setError(e.message); });
-    };
     cargar();
     const id = setInterval(cargar, 7000);
-    return () => { activo = false; clearInterval(id); };
-  }, []);
+    return () => { clearInterval(id); };
+  }, [cargar]);
+
+  // Carga los mensajes del chat abierto (reutilizable: efecto + botón Reintentar).
+  const cargarHilo = useCallback(() => {
+    if (!activa) return;
+    getMensajes(activa)
+      .then((m) => { setMensajes(m); setErrorHilo(""); })
+      .catch((e) => { setErrorHilo((e as Error).message); });
+  }, [activa]);
 
   // Auto-refresco de los mensajes de la conversacion ABIERTA: verla responder en vivo.
   useEffect(() => {
     if (!activa) return;
-    let activo = true;
-    const cargar = () => {
-      getMensajes(activa)
-        .then((m) => { if (activo) setMensajes(m); })
-        .catch(() => {});
-    };
-    cargar();
-    const id = setInterval(cargar, 7000);
-    return () => { activo = false; clearInterval(id); };
-  }, [activa]);
+    cargarHilo();
+    const id = setInterval(cargarHilo, 7000);
+    return () => { clearInterval(id); };
+  }, [activa, cargarHilo]);
 
   // Al abrir un chat o cuando entra un mensaje nuevo, baja solo al último (como WhatsApp).
   useEffect(() => {
@@ -61,6 +67,7 @@ export default function ConversacionesPage() {
   function abrir(telefono: string) {
     setActiva(telefono);
     setMensajes([]);
+    setErrorHilo("");
     prevLen.current = 0;
   }
 
@@ -111,7 +118,9 @@ export default function ConversacionesPage() {
 
       <ErrorBanner mensaje={error} />
 
-      {convs === null ? (
+      {error && convs === null ? (
+        <ErrorState mensaje={error} onRetry={cargar} />
+      ) : convs === null ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
             {[0, 1, 2, 3].map((i) => (
@@ -121,15 +130,11 @@ export default function ConversacionesPage() {
           <div className="h-[420px] animate-pulse rounded-2xl bg-bg shadow-card ring-hair md:col-span-2" />
         </div>
       ) : convs.length === 0 ? (
-        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
-          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-            <MessageCircle className="h-5 w-5" strokeWidth={1.8} />
-          </div>
-          <p className="text-sm font-semibold text-fg">Aún no hay conversaciones</p>
-          <p className="mt-1 text-sm font-medium text-fg-muted">
-            Aparecerán cuando los clientes escriban por WhatsApp.
-          </p>
-        </div>
+        <EmptyState
+          icon={MessageCircle}
+          titulo="Aún no hay conversaciones"
+          texto="Aparecerán cuando los clientes escriban por WhatsApp."
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
@@ -211,6 +216,9 @@ export default function ConversacionesPage() {
                   </div>
                 )}
 
+                {errorHilo && mensajes.length === 0 ? (
+                  <ErrorState mensaje={errorHilo} onRetry={cargarHilo} embedded />
+                ) : (
                 <div ref={scrollRef} className="max-h-[60vh] overflow-y-auto pr-1">
                   <div className="space-y-2.5">
                   {mensajes.map((m, i) => (
@@ -228,6 +236,7 @@ export default function ConversacionesPage() {
                   ))}
                   </div>
                 </div>
+                )}
               </div>
             ) : (
               <div className="flex h-full min-h-[380px] flex-col items-center justify-center text-center">

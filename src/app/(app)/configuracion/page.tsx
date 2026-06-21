@@ -8,6 +8,7 @@ import {
   type ConfiguracionNegocio,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
 import { inputCls } from "@/lib/ui";
 
 const VACIO: ConfiguracionNegocio = {
@@ -32,13 +33,32 @@ const MODELOS = [
   { slug: "openai/gpt-4.1", label: "GPT-4.1 (OpenAI) — equilibrado (~$10 / 1.000)" },
 ];
 
+// Deja solo los dígitos de un teléfono (acepta "+", espacios, guiones, paréntesis).
+function soloDigitos(crudo: string): string {
+  return (crudo ?? "").replace(/\D/g, "");
+}
+
+// Valida el WhatsApp de avisos por sus DÍGITOS (10-15). No rechaza por formato:
+// "+58 412…" o "0412…" son válidos. Vacío también es válido aquí.
+function validarTelefonoDueno(crudo: string): string {
+  const valor = soloDigitos(crudo);
+  if (!valor) return "";
+  if (valor.length < 10 || valor.length > 15) {
+    return "El WhatsApp de avisos debe tener entre 10 y 15 dígitos.";
+  }
+  return "";
+}
+
 export default function ConfiguracionPage() {
   const [datos, setDatos] = useState<ConfiguracionNegocio | null>(null);
+  const [cargaFallida, setCargaFallida] = useState(false);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
-  useEffect(() => {
+  function cargar() {
+    setCargaFallida(false);
+    setError("");
     getConfiguracion()
       .then((c) => {
         // null → "" para que los inputs sean controlados
@@ -48,7 +68,14 @@ export default function ConfiguracionPage() {
         });
         setDatos(limpio);
       })
-      .catch((e) => setError(e.message));
+      .catch((e: Error) => {
+        setError(e.message);
+        setCargaFallida(true);
+      });
+  }
+
+  useEffect(() => {
+    cargar();
   }, []);
 
   function set(campo: keyof ConfiguracionNegocio, valor: string) {
@@ -59,10 +86,30 @@ export default function ConfiguracionPage() {
 
   async function guardar() {
     if (!datos) return;
+    // Validación: el WhatsApp de avisos NO puede ser el número del bot (que es el
+    // Pago Móvil); un número no puede escribirse a sí mismo.
+    const errTel = validarTelefonoDueno(datos.dueno_telefono ?? "");
+    if (errTel) {
+      setError(errTel);
+      setGuardado(false);
+      return;
+    }
+    const avisos = soloDigitos(datos.dueno_telefono ?? "");
+    const bot = soloDigitos(datos.pago_movil_telefono ?? "");
+    // Mismo número aunque esté escrito distinto (con/sin "+", con/sin el 0 inicial):
+    // comparamos los últimos 10 dígitos (área + abonado).
+    if (avisos && bot && avisos.slice(-10) === bot.slice(-10)) {
+      setError("El WhatsApp de avisos debe ser DISTINTO al número del bot (Pago Móvil): un número no puede escribirse a sí mismo.");
+      setGuardado(false);
+      return;
+    }
+    // Guardamos el WhatsApp de avisos ya normalizado (solo dígitos).
+    const datosGuardar = avisos ? { ...datos, dueno_telefono: avisos } : datos;
     setGuardando(true);
     setError("");
     try {
-      await guardarConfiguracion(datos);
+      await guardarConfiguracion(datosGuardar);
+      setDatos(datosGuardar);
       setGuardado(true);
     } catch (e) {
       setError((e as Error).message);
@@ -80,9 +127,13 @@ export default function ConfiguracionPage() {
         </p>
       </header>
 
-      <ErrorBanner mensaje={error} />
+      {datos !== null && <ErrorBanner mensaje={error} />}
 
-      {datos === null ? (
+      {datos === null && cargaFallida ? (
+        <div className="max-w-2xl">
+          <ErrorState mensaje={error} onRetry={cargar} />
+        </div>
+      ) : datos === null ? (
         <div className="max-w-2xl space-y-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-40 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />

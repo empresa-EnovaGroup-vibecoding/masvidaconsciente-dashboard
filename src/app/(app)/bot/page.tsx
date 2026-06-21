@@ -10,6 +10,7 @@ import {
   guardarBotEstado,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
 
 type MsgSim = { rol: "user" | "assistant"; texto: string };
 
@@ -19,7 +20,8 @@ export default function BotPage() {
   const [original, setOriginal] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
-  const [errorP, setErrorP] = useState("");
+  const [errorP, setErrorP] = useState(""); // errores de guardar/encender (banner)
+  const [errorCarga, setErrorCarga] = useState(""); // fallo de la carga inicial (ErrorState)
 
   // ── Simulador ──
   const [mensajes, setMensajes] = useState<MsgSim[]>([]);
@@ -32,16 +34,23 @@ export default function BotPage() {
   const [botActivo, setBotActivo] = useState<boolean | null>(null);
   const [cambiando, setCambiando] = useState(false);
 
-  useEffect(() => {
+  function cargar() {
+    setErrorCarga("");
+    setErrorP("");
     getPersonalidad()
       .then((p) => {
         setTexto(p.personalidad);
         setOriginal(p.default);
       })
-      .catch((e) => setErrorP(e.message));
+      .catch((e) => setErrorCarga(e.message));
+    setBotActivo(null);
     getBotEstado()
       .then((e) => setBotActivo(e.activo))
       .catch(() => {});
+  }
+
+  useEffect(() => {
+    cargar();
   }, []);
 
   async function toggleBot() {
@@ -106,31 +115,45 @@ export default function BotPage() {
       <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl bg-bg p-5 shadow-card ring-hair">
         <div className="flex items-center gap-3">
           <span
-            className={`h-2.5 w-2.5 rounded-full ${botActivo === false ? "bg-red-500" : "bg-accent"}`}
+            className={`h-2.5 w-2.5 rounded-full ${
+              botActivo === null ? "bg-fg-faint" : botActivo === false ? "bg-red-500" : "bg-accent"
+            }`}
           />
           <div>
             <p className="text-sm font-semibold text-fg">
-              {botActivo === null ? "Cargando…" : botActivo ? "Bot encendido" : "Bot apagado"}
+              {botActivo === null ? "Estado desconocido" : botActivo ? "Bot encendido" : "Bot apagado"}
             </p>
             <p className="mt-0.5 text-[13px] font-medium text-fg-muted">
-              {botActivo === false
-                ? "No responde solo. Los mensajes te llegan para que respondas tú; los pagos siguen entrando."
-                : "Responde automáticamente a tus clientes por WhatsApp."}
+              {botActivo === null
+                ? "No pudimos leer el estado del bot. Inténtalo de nuevo en un momento."
+                : botActivo === false
+                  ? "No responde solo. Los mensajes te llegan para que respondas tú; los pagos siguen entrando."
+                  : "Responde automáticamente a tus clientes por WhatsApp."}
             </p>
           </div>
         </div>
-        <button
-          onClick={toggleBot}
-          disabled={cambiando || botActivo === null}
-          className={
-            botActivo === false
-              ? "focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
-              : "focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-bg px-4 py-2.5 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
-          }
-        >
-          <Power className="h-4 w-4" strokeWidth={2} />
-          {cambiando ? "…" : botActivo === false ? "Encender" : "Apagar"}
-        </button>
+        {botActivo === null ? (
+          <button
+            onClick={cargar}
+            className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-bg px-4 py-2.5 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle"
+          >
+            <RotateCcw className="h-4 w-4" strokeWidth={1.8} />
+            Reintentar
+          </button>
+        ) : (
+          <button
+            onClick={toggleBot}
+            disabled={cambiando}
+            className={
+              botActivo === false
+                ? "focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+                : "focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-bg px-4 py-2.5 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
+            }
+          >
+            <Power className="h-4 w-4" strokeWidth={2} />
+            {cambiando ? "…" : botActivo === false ? "Encender" : "Apagar"}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -141,9 +164,11 @@ export default function BotPage() {
             Escribe en tus palabras cómo debe ser tu asistente: su tono, qué resaltar, cómo cerrar la venta.
           </p>
 
-          <ErrorBanner mensaje={errorP} className="mb-4" />
+          {texto !== null && <ErrorBanner mensaje={errorP} className="mb-4" />}
 
-          {texto === null ? (
+          {errorCarga && texto === null ? (
+            <ErrorState mensaje={errorCarga} onRetry={cargar} embedded />
+          ) : texto === null ? (
             <div className="h-72 animate-pulse rounded-xl bg-bg-subtle ring-hair" />
           ) : (
             <textarea

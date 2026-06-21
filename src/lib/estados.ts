@@ -39,3 +39,15 @@ export function estiloEstado(estado: string): EstiloEstado {
     }
   );
 }
+
+// ─── Estados de PAGO (reportado/confirmado/rechazado/parcial) ────────────
+const MAPA_PAGO: Record<string, { cls: string; label: string }> = {
+  reportado: { cls: "bg-warn-bg text-warn ring-warn-border", label: "Por verificar" },
+  confirmado: { cls: "bg-accent/10 text-accent ring-accent/15", label: "Confirmado" },
+  rechazado: { cls: "bg-red-50 text-red-700 ring-red-600/15", label: "Rechazado" },
+  parcial: { cls: "bg-orange-50 text-orange-700 ring-orange-600/15", label: "Pago parcial" },
+};
+
+export function estiloPago(estado: string): { cls: string; label: string } {
+  return MAPA_PAGO[estado] ?? { cls: "bg-bg-subtle text-fg-muted ring-borde", label: estado };
+}

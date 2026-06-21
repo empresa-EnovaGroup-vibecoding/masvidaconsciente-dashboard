@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
 import { getGuiasMensajes, guardarGuiasMensajes, type GuiasMensajes } from "@/lib/api";
 
 const CAMPOS: { key: keyof GuiasMensajes; label: string; help: string }[] = [
@@ -35,10 +36,15 @@ export default function MensajesPage() {
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
-  useEffect(() => {
+  function cargar() {
+    setError("");
     getGuiasMensajes()
       .then((g) => setDatos({ ...VACIO, ...g }))
-      .catch((e) => setError(e.message));
+      .catch((e) => setError((e as Error).message));
+  }
+
+  useEffect(() => {
+    cargar();
   }, []);
 
   function set(campo: keyof GuiasMensajes, valor: string) {
@@ -71,9 +77,13 @@ export default function MensajesPage() {
         </p>
       </header>
 
-      <ErrorBanner mensaje={error} />
+      {datos !== null && <ErrorBanner mensaje={error} />}
 
-      {datos === null ? (
+      {error && datos === null ? (
+        <div className="max-w-2xl">
+          <ErrorState mensaje={error} onRetry={cargar} />
+        </div>
+      ) : datos === null ? (
         <div className="max-w-2xl space-y-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />

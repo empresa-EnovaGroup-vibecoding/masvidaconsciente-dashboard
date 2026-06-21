@@ -26,14 +26,11 @@ import {
   type Reporte,
   type Pedido,
 } from "@/lib/api";
-import { estiloEstado } from "@/lib/estados";
 import { ErrorBanner } from "@/components/error-banner";
-
-// ─── Helpers de formato (Venezuela: punto de miles, coma decimal) ───────
-const fmt = (n: number) =>
-  n.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const usd = (n: number) => `$${fmt(n)}`;
-const bs = (n: number) => `Bs ${fmt(n)}`;
+import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
+import { EstadoBadge } from "@/components/estado-badge";
+import { formatUSD, formatBs, formatHora } from "@/lib/format";
 
 function saludo(): string {
   const h = new Date().getHours();
@@ -51,26 +48,6 @@ function fechaHoy(): string {
   return f.charAt(0).toUpperCase() + f.slice(1);
 }
 
-function hora(fecha: string): string {
-  return new Date(fecha).toLocaleTimeString("es-VE", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function EstadoBadge({ estado }: { estado: string }) {
-  const e = estiloEstado(estado);
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${e.cls}`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${e.dot}`} />
-      {e.label}
-    </span>
-  );
-}
-
 function Skel({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-bg-subtle ${className}`} />;
 }
@@ -84,13 +61,18 @@ export default function DashboardPage() {
   const [pagosPend, setPagosPend] = useState(0);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  function cargar() {
+    setError("");
     getMetricas().then(setM).catch((e) => setError(e.message));
     getTasa().then(setTasa).catch(() => {});
     getReporte().then(setReporte).catch(() => {});
     getPedidos().then(setPedidos).catch(() => {});
     getBotEstado().then((b) => setBotActivo(b.activo)).catch(() => {});
     getPagos("reportado").then((p) => setPagosPend(p.length)).catch(() => {});
+  }
+
+  useEffect(() => {
+    cargar();
   }, []);
 
   const ventasBs = m && tasa?.tasa_efectiva ? m.ventas_hoy_usd * tasa.tasa_efectiva : null;
@@ -102,7 +84,7 @@ export default function DashboardPage() {
   // COBRADO (pagos confirmados) se muestra aparte, en la sección "Cobrado".
   const tarjetas = [
     { label: "Pedidos hoy", valor: m ? String(m.pedidos_hoy) : null, sub: "hoy", icon: ShoppingBag },
-    { label: "Facturado hoy", valor: m ? usd(m.ventas_hoy_usd) : null, sub: ventasBs ? `≈ ${bs(ventasBs)}` : "hoy", icon: DollarSign },
+    { label: "Facturado hoy", valor: m ? formatUSD(m.ventas_hoy_usd) : null, sub: ventasBs ? `≈ ${formatBs(ventasBs)}` : "hoy", icon: DollarSign },
     { label: "Clientes", valor: m ? String(m.clientes_total) : null, sub: "en total", icon: Users },
   ];
 
@@ -130,7 +112,12 @@ export default function DashboardPage() {
           href="/bot"
           className="focus-ring flex items-center gap-2 rounded-full bg-bg px-4 py-2 shadow-soft ring-hair transition hover:bg-bg-subtle"
         >
-          {botActivo === false ? (
+          {botActivo === null ? (
+            <>
+              <span className="h-2.5 w-2.5 rounded-full bg-fg-faint" />
+              <span className="text-sm font-semibold text-fg-muted">Estado desconocido</span>
+            </>
+          ) : botActivo === false ? (
             <>
               <span className="h-2.5 w-2.5 rounded-full bg-fg-faint" />
               <span className="text-sm font-semibold text-fg-muted">Bot pausado</span>
@@ -172,6 +159,10 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {error && m === null ? (
+        <ErrorState mensaje={error} onRetry={cargar} />
+      ) : (
+        <>
       <ErrorBanner mensaje={error} />
 
       {/* ── Tarjetas de métrica ──────────────────────────────────── */}
@@ -229,7 +220,7 @@ export default function DashboardPage() {
                   <div key={label}>
                     <div className="flex items-baseline justify-between">
                       <span className="text-sm font-semibold text-fg">{label}</span>
-                      <span className="text-lg font-extrabold num-snug text-fg tnum">{usd(d.ventas_usd)}</span>
+                      <span className="text-lg font-extrabold num-snug text-fg tnum">{formatUSD(d.ventas_usd)}</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-bg-subtle">
                       <div
@@ -265,7 +256,7 @@ export default function DashboardPage() {
             <Skel className="mt-1.5 h-9 w-40" />
           ) : (
             <p className="mt-1 text-4xl font-extrabold num-tight text-fg tnum">
-              {tasa.tasa_efectiva != null ? bs(tasa.tasa_efectiva) : "—"}
+              {formatBs(tasa.tasa_efectiva)}
             </p>
           )}
           <p className="mt-1 text-sm font-medium text-fg-muted">por cada $1</p>
@@ -312,12 +303,12 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : ultimos.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <p className="text-sm font-semibold text-fg">Aún no hay pedidos</p>
-            <p className="mt-1 text-sm font-medium text-fg-muted">
-              Cuando un cliente ordene por WhatsApp, aparecerá aquí.
-            </p>
-          </div>
+          <EmptyState
+            icon={ShoppingBag}
+            titulo="Aún no hay pedidos"
+            texto="Cuando un cliente ordene por WhatsApp, aparecerá aquí."
+            embedded
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -345,11 +336,11 @@ export default function DashboardPage() {
                     <td className="max-w-[260px] truncate px-6 py-4 font-medium text-fg-muted">
                       {p.items.map((it) => it.producto).join(" + ") || "—"}
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-fg tnum">{usd(p.total_usd)}</td>
+                    <td className="px-6 py-4 text-right font-bold text-fg tnum">{formatUSD(p.total_usd)}</td>
                     <td className="px-6 py-4">
                       <EstadoBadge estado={p.estado} />
                     </td>
-                    <td className="px-6 py-4 text-right font-semibold text-fg-muted tnum">{hora(p.fecha)}</td>
+                    <td className="px-6 py-4 text-right font-semibold text-fg-muted tnum">{formatHora(p.fecha)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -357,6 +348,8 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+        </>
+      )}
     </div>
   );
 }

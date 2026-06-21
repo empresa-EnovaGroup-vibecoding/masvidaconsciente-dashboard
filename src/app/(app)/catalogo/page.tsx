@@ -15,6 +15,8 @@ import {
 } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { inputCls } from "@/lib/ui";
 
 const ORDEN = ["panaderia", "dulceria", "congelados", "artesanal", "harinas"];
@@ -55,6 +57,7 @@ export default function CatalogoPage() {
   const [pdfOcupado, setPdfOcupado] = useState(false);
 
   function recargar() {
+    setError("");
     getProductos().then(setProductos).catch((e) => setError(e.message));
   }
 
@@ -64,6 +67,16 @@ export default function CatalogoPage() {
       .then((r) => setPdfTiene(r.tiene))
       .catch(() => setPdfTiene(false));
   }, []);
+
+  // Cierra el modal con la tecla Escape (no mientras se guarda).
+  useEffect(() => {
+    if (!form) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !guardando) setForm(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [form, guardando]);
 
   async function onPdfSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -163,12 +176,22 @@ export default function CatalogoPage() {
 
   async function guardar() {
     if (!form || !form.nombre.trim()) return;
+    let precio: number | null = null;
+    if (form.precio.trim() !== "") {
+      const n = Number(form.precio);
+      if (!Number.isFinite(n) || n <= 0) {
+        setError("El precio debe ser un número mayor que 0. Déjalo vacío si quieres que diga \"consultar\".");
+        return;
+      }
+      precio = n;
+    }
     setGuardando(true);
+    setError("");
     const datos: ProductoInput = {
       nombre: form.nombre.trim(),
       categoria: form.categoria,
       descripcion: form.descripcion.trim() || null,
-      precio: form.precio.trim() === "" ? null : Number(form.precio),
+      precio,
       presentacion: form.presentacion.trim() || null,
       disponible: form.disponible,
     };
@@ -249,24 +272,22 @@ export default function CatalogoPage() {
         </div>
       </div>
 
-      <ErrorBanner mensaje={error} />
+      {productos !== null && <ErrorBanner mensaje={error} />}
 
-      {productos === null ? (
+      {error && productos === null ? (
+        <ErrorState mensaje={error} onRetry={recargar} />
+      ) : productos === null ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-28 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : productos.length === 0 ? (
-        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
-          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-            <Package className="h-5 w-5" strokeWidth={1.8} />
-          </div>
-          <p className="text-sm font-semibold text-fg">Aún no hay productos</p>
-          <p className="mt-1 text-sm font-medium text-fg-muted">
-            Agrega el primero con &quot;Nuevo producto&quot;.
-          </p>
-        </div>
+        <EmptyState
+          icon={Package}
+          titulo="Aún no hay productos"
+          texto='Agrega el primero con "Nuevo producto".'
+        />
       ) : (
         categorias.map((cat) => (
           <section key={cat} className="mb-10">
@@ -340,11 +361,14 @@ export default function CatalogoPage() {
           onClick={() => !guardando && setForm(null)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="catalogo-modal-titulo"
             className="w-full max-w-md rounded-2xl bg-bg p-6 shadow-soft ring-hair"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-semibold num-snug text-fg">
+              <h2 id="catalogo-modal-titulo" className="text-lg font-semibold num-snug text-fg">
                 {form.id ? "Editar producto" : "Nuevo producto"}
               </h2>
               <button
@@ -357,10 +381,10 @@ export default function CatalogoPage() {
             </div>
 
             <div className="space-y-3.5">
-              <Campo label="Nombre">
+              <Campo label="Nombre" htmlFor="prod-nombre">
                 <input
+                  id="prod-nombre"
                   className={inputCls}
-                  aria-label="Nombre"
                   value={form.nombre}
                   onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                   placeholder="Ej. Pan integral"
@@ -368,10 +392,10 @@ export default function CatalogoPage() {
               </Campo>
 
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Categoría">
+                <Campo label="Categoría" htmlFor="prod-categoria">
                   <select
+                    id="prod-categoria"
                     className={inputCls}
-                    aria-label="Categoría"
                     value={form.categoria}
                     onChange={(e) => setForm({ ...form, categoria: e.target.value })}
                   >
@@ -385,10 +409,10 @@ export default function CatalogoPage() {
                     ))}
                   </select>
                 </Campo>
-                <Campo label="Precio (USD)">
+                <Campo label="Precio (USD)" htmlFor="prod-precio">
                   <input
+                    id="prod-precio"
                     className={inputCls}
-                    aria-label="Precio en dólares"
                     type="number"
                     step="0.01"
                     min="0"
@@ -399,20 +423,20 @@ export default function CatalogoPage() {
                 </Campo>
               </div>
 
-              <Campo label="Presentación">
+              <Campo label="Presentación" htmlFor="prod-presentacion">
                 <input
+                  id="prod-presentacion"
                   className={inputCls}
-                  aria-label="Presentación"
                   value={form.presentacion}
                   onChange={(e) => setForm({ ...form, presentacion: e.target.value })}
                   placeholder="Ej. Bolsa de 500g"
                 />
               </Campo>
 
-              <Campo label="Descripción">
+              <Campo label="Descripción" htmlFor="prod-descripcion">
                 <textarea
+                  id="prod-descripcion"
                   className={`${inputCls} resize-none`}
-                  aria-label="Descripción"
                   rows={3}
                   value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
@@ -454,10 +478,20 @@ export default function CatalogoPage() {
   );
 }
 
-function Campo({ label, children }: { label: string; children: React.ReactNode }) {
+function Campo({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <label className="mb-1 block text-[12px] font-medium text-fg-muted">{label}</label>
+      <label htmlFor={htmlFor} className="mb-1 block text-[12px] font-medium text-fg-muted">
+        {label}
+      </label>
       {children}
     </div>
   );

@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!listo) return;
     getPagos("reportado")
       .then((p) => setPendientes(p.length))
-      .catch(() => {});
+      .catch(() => setPendientes(0));
     getConfiguracion()
       .then(setConfig)
       .catch(() => {});

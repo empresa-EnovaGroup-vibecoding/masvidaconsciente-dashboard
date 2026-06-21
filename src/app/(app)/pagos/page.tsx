@@ -14,21 +14,10 @@ import {
   type EstadoPago,
 } from "@/lib/api";
 import { formatUSD, formatBs, formatTasa } from "@/lib/format";
+import { estiloPago } from "@/lib/estados";
 import { ErrorBanner } from "@/components/error-banner";
-
-const COLOR: Record<EstadoPago, string> = {
-  reportado: "bg-warn-bg text-warn ring-warn-border",
-  confirmado: "bg-accent/10 text-accent ring-accent/15",
-  rechazado: "bg-red-50 text-red-700 ring-red-600/15",
-  parcial: "bg-orange-50 text-orange-700 ring-orange-600/15",
-};
-
-const ETIQUETA: Record<EstadoPago, string> = {
-  reportado: "Por verificar",
-  confirmado: "Confirmado",
-  rechazado: "Rechazado",
-  parcial: "Pago parcial",
-};
+import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 
 /** Carga el comprobante como blob autenticado y lo muestra. Un <img src> directo
  * no sirve porque no manda el token, y el comprobante es privado. */
@@ -94,6 +83,7 @@ export default function PagosPage() {
   const [filtro, setFiltro] = useState<EstadoPago>("reportado");
 
   function cargar() {
+    setError("");
     getPagos(filtro).then(setPagos).catch((e) => setError(e.message));
   }
   useEffect(cargar, [filtro]);
@@ -203,24 +193,22 @@ export default function PagosPage() {
         ))}
       </div>
 
-      <ErrorBanner mensaje={error} />
+      {pagos !== null && <ErrorBanner mensaje={error} />}
 
-      {pagos === null ? (
+      {error && pagos === null ? (
+        <ErrorState mensaje={error} onRetry={cargar} />
+      ) : pagos === null ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-44 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />
           ))}
         </div>
       ) : pagos.length === 0 ? (
-        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
-          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-            <Wallet className="h-5 w-5" strokeWidth={1.8} />
-          </div>
-          <p className="text-sm font-semibold text-fg">Aún no hay pagos</p>
-          <p className="mt-1 text-sm font-medium text-fg-muted">
-            Cuando un cliente reporte un pago por WhatsApp, aparecerá aquí.
-          </p>
-        </div>
+        <EmptyState
+          icon={Wallet}
+          titulo="Aún no hay pagos"
+          texto="Cuando un cliente reporte un pago por WhatsApp, aparecerá aquí."
+        />
       ) : (
         <div className="space-y-3">
           {pagos.map((p) => (
@@ -239,9 +227,9 @@ export default function PagosPage() {
                   <p className="text-lg font-extrabold num-snug text-fg tnum">{formatBs(p.monto_bs)}</p>
                   <p className="text-[13px] font-medium text-fg-muted tnum">{formatUSD(p.monto_usd)}</p>
                   <span
-                    className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${COLOR[p.estado] ?? "bg-bg-subtle text-fg-muted ring-borde"}`}
+                    className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${estiloPago(p.estado).cls}`}
                   >
-                    {ETIQUETA[p.estado] ?? p.estado}
+                    {estiloPago(p.estado).label}
                   </span>
                 </div>
               </div>

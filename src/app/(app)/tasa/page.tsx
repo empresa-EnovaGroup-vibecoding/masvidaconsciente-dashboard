@@ -5,6 +5,7 @@ import { Check, Lock, RefreshCw } from "lucide-react";
 import { getTasa, guardarTasa, type EstadoTasa } from "@/lib/api";
 import { formatBs } from "@/lib/format";
 import { ErrorBanner } from "@/components/error-banner";
+import { ErrorState } from "@/components/error-state";
 import { inputCls } from "@/lib/ui";
 
 export default function TasaPage() {
@@ -17,6 +18,7 @@ export default function TasaPage() {
   const [guardado, setGuardado] = useState(false);
 
   function cargar() {
+    setError("");
     getTasa()
       .then((t) => {
         setEstado(t);
@@ -67,9 +69,11 @@ export default function TasaPage() {
         </p>
       </header>
 
-      <ErrorBanner mensaje={error} />
+      {estado !== null && <ErrorBanner mensaje={error} />}
 
-      {estado === null ? (
+      {error && estado === null ? (
+        <ErrorState mensaje={error} onRetry={cargar} />
+      ) : estado === null ? (
         <div className="max-w-2xl space-y-4">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-bg shadow-card ring-hair" />

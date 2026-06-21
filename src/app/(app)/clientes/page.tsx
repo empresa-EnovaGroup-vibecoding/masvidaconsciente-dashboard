@@ -9,16 +9,17 @@ import {
   type ClienteResumen,
   type ClienteDetalle,
 } from "@/lib/api";
-import { formatUSD } from "@/lib/format";
-import { estiloEstado } from "@/lib/estados";
+import { formatUSD, formatFecha } from "@/lib/format";
+import { EstadoBadge } from "@/components/estado-badge";
+import { ErrorState } from "@/components/error-state";
+import { EmptyState } from "@/components/empty-state";
 import { ErrorBanner } from "@/components/error-banner";
-
-const fecha = (s: string | null) =>
-  s ? new Date(s).toLocaleDateString("es-VE", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteResumen[] | null>(null);
   const [error, setError] = useState("");
+  const [errorLista, setErrorLista] = useState("");
+  const [errorDetalle, setErrorDetalle] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [activa, setActiva] = useState<string | null>(null);
   const [detalle, setDetalle] = useState<ClienteDetalle | null>(null);
@@ -26,20 +27,32 @@ export default function ClientesPage() {
   const [guardando, setGuardando] = useState(false);
   const [notasOk, setNotasOk] = useState(false);
 
+  function cargar() {
+    setErrorLista("");
+    getClientes()
+      .then(setClientes)
+      .catch((e) => setErrorLista((e as Error).message));
+  }
+
   useEffect(() => {
-    getClientes().then(setClientes).catch((e) => setError(e.message));
+    cargar();
   }, []);
 
   function abrir(telefono: string) {
     setActiva(telefono);
     setDetalle(null);
+    setErrorDetalle("");
     setNotasOk(false);
     getCliente(telefono)
       .then((d) => {
         setDetalle(d);
         setNotas(d.notas ?? "");
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => setErrorDetalle((e as Error).message));
+  }
+
+  function recargarDetalle() {
+    if (activa) abrir(activa);
   }
 
   async function guardarNotas() {
@@ -73,7 +86,9 @@ export default function ClientesPage() {
 
       <ErrorBanner mensaje={error} />
 
-      {clientes === null ? (
+      {errorLista && clientes === null ? (
+        <ErrorState mensaje={errorLista} onRetry={cargar} />
+      ) : clientes === null ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <div className="h-10 animate-pulse rounded-xl bg-bg shadow-card ring-hair" />
@@ -84,15 +99,11 @@ export default function ClientesPage() {
           <div className="h-[420px] animate-pulse rounded-2xl bg-bg shadow-card ring-hair md:col-span-2" />
         </div>
       ) : clientes.length === 0 ? (
-        <div className="rounded-2xl bg-bg p-12 text-center shadow-card ring-hair">
-          <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
-            <Users className="h-5 w-5" strokeWidth={1.8} />
-          </div>
-          <p className="text-sm font-semibold text-fg">Aún no hay clientes</p>
-          <p className="mt-1 text-sm font-medium text-fg-muted">
-            Aparecerán cuando alguien escriba por WhatsApp.
-          </p>
-        </div>
+        <EmptyState
+          icon={Users}
+          titulo="Aún no hay clientes"
+          texto="Aparecerán cuando alguien escriba por WhatsApp."
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {/* Lista + buscador */}
@@ -134,7 +145,7 @@ export default function ClientesPage() {
                       </div>
                       <p className="mt-0.5 text-xs font-medium text-fg-muted tnum">
                         {c.num_pedidos} {c.num_pedidos === 1 ? "pedido" : "pedidos"} · última{" "}
-                        {fecha(c.ultima_compra)}
+                        {formatFecha(c.ultima_compra)}
                       </p>
                     </div>
                   </div>
@@ -154,6 +165,8 @@ export default function ClientesPage() {
               <div className="flex h-full items-center justify-center">
                 <p className="text-sm font-medium text-fg-muted">Elige un cliente para ver su ficha</p>
               </div>
+            ) : errorDetalle && detalle === null ? (
+              <ErrorState mensaje={errorDetalle} onRetry={recargarDetalle} />
             ) : detalle === null ? (
               <div className="space-y-3">
                 <div className="h-8 w-40 animate-pulse rounded-md bg-bg-subtle" />
@@ -172,7 +185,7 @@ export default function ClientesPage() {
                     </div>
                   </div>
                   <p className="text-xs font-medium text-fg-muted">
-                    Cliente desde {fecha(detalle.primera_interaccion)}
+                    Cliente desde {formatFecha(detalle.primera_interaccion)}
                   </p>
                 </div>
 
@@ -240,12 +253,8 @@ export default function ClientesPage() {
                           </span>
                         </div>
                         <div className="mt-1.5 flex items-center gap-2">
-                          <span className="text-xs font-medium text-fg-muted">{fecha(p.fecha)}</span>
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${estiloEstado(p.estado).cls}`}
-                          >
-                            {estiloEstado(p.estado).label}
-                          </span>
+                          <span className="text-xs font-medium text-fg-muted">{formatFecha(p.fecha)}</span>
+                          <EstadoBadge estado={p.estado} />
                         </div>
                         {p.items && p.items.length > 0 && (
                           <p className="mt-1.5 truncate text-xs font-medium text-fg-muted">
