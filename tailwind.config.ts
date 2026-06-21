@@ -22,9 +22,10 @@ export default {
         sans: ["var(--font-nunito)", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        card: "0 1px 1.5px rgba(20,40,30,0.035), 0 10px 30px -22px rgba(20,40,30,0.16)",
-        "card-hover": "0 1px 2px rgba(20,40,30,0.04), 0 18px 40px -24px rgba(20,40,30,0.22)",
-        soft: "0 1px 1px rgba(20,40,30,0.04)",
+        // Look "Sereno": sombras más suaves, difusas y ligeras (neutras, no verdes).
+        card: "0 1px 2px rgba(16,24,40,0.03), 0 10px 30px -14px rgba(16,24,40,0.10)",
+        "card-hover": "0 2px 4px rgba(16,24,40,0.04), 0 22px 48px -20px rgba(16,24,40,0.14)",
+        soft: "0 1px 2px rgba(16,24,40,0.035)",
       },
       borderRadius: {
         xl: "0.75rem",

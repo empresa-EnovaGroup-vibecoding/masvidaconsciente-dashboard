@@ -168,30 +168,30 @@ export default function DashboardPage() {
       {/* ── Tarjetas de métrica ──────────────────────────────────── */}
       <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {tarjetas.map(({ label, valor, sub, icon: Icon }) => (
-          <div key={label} className="card rounded-2xl bg-bg p-5 shadow-card ring-hair">
+          <div key={label} className="card rounded-2xl bg-bg p-6 shadow-card ring-hair">
             <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
               <Icon className="h-5 w-5" strokeWidth={2} />
             </div>
             <p className="text-sm font-semibold text-fg-muted">{label}</p>
             {valor === null ? (
-              <Skel className="mt-1.5 h-8 w-20" />
+              <Skel className="mt-2 h-9 w-24" />
             ) : (
-              <p className="mt-1 text-3xl font-extrabold num-tight text-fg tnum">{valor}</p>
+              <p className="mt-1.5 text-4xl font-extrabold num-tight text-fg tnum">{valor}</p>
             )}
             <p className="mt-1 text-xs font-medium text-fg-faint tnum">{sub}</p>
           </div>
         ))}
 
         {/* Pendientes (resaltada en ámbar; el ámbar es acento, el número va en fg) */}
-        <div className="rounded-2xl bg-warn-bg p-5 shadow-card ring-1 ring-warn-border">
+        <div className="rounded-2xl bg-warn-bg p-6 shadow-card ring-1 ring-warn-border">
           <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-warn/15 text-warn">
             <Clock className="h-5 w-5" strokeWidth={2} />
           </div>
           <p className="text-sm font-semibold text-warn">Pendientes</p>
           {m === null ? (
-            <Skel className="mt-1.5 h-8 w-12" />
+            <Skel className="mt-2 h-9 w-14" />
           ) : (
-            <p className="mt-1 text-3xl font-extrabold num-tight text-fg tnum">{m.pedidos_pendientes}</p>
+            <p className="mt-1.5 text-4xl font-extrabold num-tight text-fg tnum">{m.pedidos_pendientes}</p>
           )}
           <Link href="/pedidos" className="lnk mt-1 text-xs font-bold text-warn hover:underline">
             Ver pendientes <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />

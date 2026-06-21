@@ -28,12 +28,9 @@ body {
   color: hsl(var(--fg));
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Fondo claro con tinte verde natural muy sutil */
-  background-color: hsl(150 22% 99%);
-  background-image:
-    radial-gradient(1100px 560px at 88% -12%, hsla(152, 45%, 33%, 0.035), transparent 62%),
-    radial-gradient(820px 460px at -4% 112%, hsla(152, 45%, 33%, 0.028), transparent 58%);
-  background-attachment: fixed;
+  /* Look "Sereno": lienzo cálido casi blanco, PLANO y calmado (sin degradados).
+     Las tarjetas son blanco puro (--bg) y flotan sobre este papel cálido. */
+  background-color: hsl(48 15% 98.3%);
 }
 
 /* Números alineados como en datos financieros */
@@ -51,15 +48,15 @@ body {
 
 /* Hairline: anillo interno finísimo en vez de bordes duros */
 .ring-hair {
-  box-shadow: inset 0 0 0 1px hsla(155, 20%, 12%, 0.05);
+  box-shadow: inset 0 0 0 1px hsla(220, 14%, 14%, 0.055);
 }
 
-/* Tarjeta con micro-elevación al pasar el mouse */
+/* Tarjeta con micro-elevación al pasar el mouse (sombra suave y difusa, look Sereno) */
 .card {
   transition: box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .card:hover {
-  box-shadow: 0 1px 2px rgba(20, 40, 30, 0.04), 0 18px 40px -24px rgba(20, 40, 30, 0.22);
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.04), 0 22px 48px -20px rgba(16, 24, 40, 0.14);
   transform: translateY(-1px);
 }
 
