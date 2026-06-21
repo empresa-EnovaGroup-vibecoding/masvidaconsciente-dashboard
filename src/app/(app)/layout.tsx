@@ -80,17 +80,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 aria-current={activo ? "page" : undefined}
                 className={`focus-ring flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                   activo
-                    ? "bg-accent text-accent-fg font-semibold shadow-soft"
+                    ? "bg-accent/10 text-accent font-semibold"
                     : "text-fg-muted font-medium hover:bg-bg-subtle hover:text-fg"
                 }`}
               >
-                <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+                <Icon className="h-[18px] w-[18px]" strokeWidth={activo ? 2 : 1.8} />
                 <span className="flex-1">{label}</span>
                 {label === "Pagos" && pendientes > 0 && (
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">
                     {pendientes}
                   </span>
                 )}
+                {activo && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
               </Link>
             );
           })}
