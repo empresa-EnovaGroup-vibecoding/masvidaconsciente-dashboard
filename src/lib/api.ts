@@ -307,6 +307,8 @@ export const verificarMonto = (id: number, monto_recibido: number) =>
     method: "POST",
     body: JSON.stringify({ monto_recibido }),
   });
+export const reabrirPago = (id: number) => request(`/api/pagos/${id}/reabrir`, { method: "POST" });
+export const anularPago = (id: number) => request(`/api/pagos/${id}/anular`, { method: "POST" });
 
 /**
  * Descarga el comprobante (imagen/PDF) como blob usando el token Bearer y

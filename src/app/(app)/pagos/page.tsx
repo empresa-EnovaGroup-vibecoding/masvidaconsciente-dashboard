@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Wallet, Check, X, Scale } from "lucide-react";
+import { Wallet, Check, X, Scale, RotateCcw, Ban } from "lucide-react";
 import {
   getPagos,
   confirmarPago,
   rechazarPago,
   verificarMonto,
+  reabrirPago,
+  anularPago,
   getComprobanteUrl,
   type Pago,
   type EstadoPago,
@@ -76,17 +78,25 @@ function Comprobante({ pago }: { pago: Pago }) {
   );
 }
 
+const FILTROS: { valor: EstadoPago; etiqueta: string }[] = [
+  { valor: "reportado", etiqueta: "Por verificar" },
+  { valor: "confirmado", etiqueta: "Confirmados" },
+  { valor: "rechazado", etiqueta: "Rechazados" },
+  { valor: "parcial", etiqueta: "Parciales" },
+];
+
 export default function PagosPage() {
   const [pagos, setPagos] = useState<Pago[] | null>(null);
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState<number | null>(null);
   const [montoAbierto, setMontoAbierto] = useState<number | null>(null);
   const [montoValor, setMontoValor] = useState("");
+  const [filtro, setFiltro] = useState<EstadoPago>("reportado");
 
   function cargar() {
-    getPagos().then(setPagos).catch((e) => setError(e.message));
+    getPagos(filtro).then(setPagos).catch((e) => setError(e.message));
   }
-  useEffect(cargar, []);
+  useEffect(cargar, [filtro]);
 
   async function confirmar(id: number) {
     setError("");
@@ -117,14 +127,52 @@ export default function PagosPage() {
 
   async function registrarMonto(id: number) {
     setError("");
+    const n = Number(montoValor);
+    if (!Number.isFinite(n) || n <= 0) {
+      setError("Monto invalido");
+      return;
+    }
     setEnviando(id);
     try {
-      await verificarMonto(id, Number(montoValor));
+      await verificarMonto(id, n);
       setMontoAbierto(null);
       setMontoValor("");
       cargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo registrar el monto");
+    } finally {
+      setEnviando(null);
+    }
+  }
+
+  async function reabrir(id: number) {
+    if (!window.confirm("¿Reabrir este pago? Volverá a Por verificar.")) return;
+    setError("");
+    setEnviando(id);
+    try {
+      await reabrirPago(id);
+      cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo reabrir");
+    } finally {
+      setEnviando(null);
+    }
+  }
+
+  async function anular(id: number) {
+    if (
+      !window.confirm(
+        "¿Anular este pago confirmado? Volverá a Por verificar y se descontará del reporte.",
+      )
+    )
+      return;
+    setError("");
+    setEnviando(id);
+    try {
+      await anularPago(id);
+      cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo anular");
     } finally {
       setEnviando(null);
     }
@@ -138,6 +186,22 @@ export default function PagosPage() {
           Verifica los comprobantes y confirma los pagos de tus clientes
         </p>
       </header>
+
+      <div className="mb-5 flex flex-wrap gap-2">
+        {FILTROS.map((f) => (
+          <button
+            key={f.valor}
+            onClick={() => setFiltro(f.valor)}
+            className={`focus-ring rounded-xl px-3.5 py-2 text-[13px] font-semibold ring-1 ring-inset transition ${
+              filtro === f.valor
+                ? "bg-accent text-accent-fg ring-accent"
+                : "bg-bg text-fg-muted ring-borde hover:bg-bg-subtle"
+            }`}
+          >
+            {f.etiqueta}
+          </button>
+        ))}
+      </div>
 
       <ErrorBanner mensaje={error} />
 
@@ -175,9 +239,9 @@ export default function PagosPage() {
                   <p className="text-lg font-extrabold num-snug text-fg tnum">{formatBs(p.monto_bs)}</p>
                   <p className="text-[13px] font-medium text-fg-muted tnum">{formatUSD(p.monto_usd)}</p>
                   <span
-                    className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${COLOR[p.estado]}`}
+                    className={`mt-1 inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${COLOR[p.estado] ?? "bg-bg-subtle text-fg-muted ring-borde"}`}
                   >
-                    {ETIQUETA[p.estado]}
+                    {ETIQUETA[p.estado] ?? p.estado}
                   </span>
                 </div>
               </div>
@@ -257,26 +321,58 @@ export default function PagosPage() {
                   )}
                 </div>
               ) : p.estado === "parcial" ? (
-                <p className="text-[12px] font-medium text-fg-muted">
-                  Recibido {formatBs(p.monto_recibido)}
-                  {p.monto_bs !== null && p.monto_recibido !== null && (
-                    <span className="font-semibold text-orange-700">
-                      {" "}· faltan {formatBs(p.monto_bs - p.monto_recibido)}
-                    </span>
-                  )}
-                  {p.confirmado_por ? ` (${p.confirmado_por})` : ""}
-                </p>
-              ) : (
-                <p className="text-[12px] font-medium text-fg-muted">
-                  {p.estado === "confirmado" ? "Confirmado" : "Rechazado"}
-                  {p.confirmado_por ? ` por ${p.confirmado_por}` : ""}
-                  {p.estado === "confirmado" &&
-                    p.monto_recibido !== null &&
-                    p.monto_bs !== null &&
-                    p.monto_recibido > p.monto_bs && (
-                      <span> · saldo a favor {formatBs(p.monto_recibido - p.monto_bs)}</span>
+                <div className="space-y-3">
+                  <p className="text-[12px] font-medium text-fg-muted">
+                    Recibido {formatBs(p.monto_recibido)}
+                    {p.monto_bs !== null && p.monto_recibido !== null && (
+                      <span className="font-semibold text-orange-700">
+                        {" "}· faltan {formatBs(p.monto_bs - p.monto_recibido)}
+                      </span>
                     )}
-                </p>
+                    {p.confirmado_por ? ` (${p.confirmado_por})` : ""}
+                  </p>
+                  <button
+                    onClick={() => reabrir(p.id)}
+                    disabled={enviando === p.id}
+                    className="focus-ring flex items-center gap-1.5 rounded-xl bg-bg px-3.5 py-2 text-[13px] font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
+                  >
+                    <RotateCcw className="h-4 w-4" strokeWidth={2} />
+                    Reabrir
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-[12px] font-medium text-fg-muted">
+                    {p.estado === "confirmado" ? "Confirmado" : "Rechazado"}
+                    {p.confirmado_por ? ` por ${p.confirmado_por}` : ""}
+                    {p.estado === "confirmado" &&
+                      p.monto_recibido !== null &&
+                      p.monto_bs !== null &&
+                      p.monto_recibido > p.monto_bs && (
+                        <span> · saldo a favor {formatBs(p.monto_recibido - p.monto_bs)}</span>
+                      )}
+                  </p>
+                  {p.estado === "rechazado" && (
+                    <button
+                      onClick={() => reabrir(p.id)}
+                      disabled={enviando === p.id}
+                      className="focus-ring flex items-center gap-1.5 rounded-xl bg-bg px-3.5 py-2 text-[13px] font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
+                    >
+                      <RotateCcw className="h-4 w-4" strokeWidth={2} />
+                      Reabrir
+                    </button>
+                  )}
+                  {p.estado === "confirmado" && (
+                    <button
+                      onClick={() => anular(p.id)}
+                      disabled={enviando === p.id}
+                      className="focus-ring flex items-center gap-1.5 rounded-xl bg-red-600 px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                    >
+                      <Ban className="h-4 w-4" strokeWidth={2} />
+                      {enviando === p.id ? "Anulando…" : "Anular pago"}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           ))}
