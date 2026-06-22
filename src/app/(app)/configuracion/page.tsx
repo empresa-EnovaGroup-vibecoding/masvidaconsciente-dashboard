@@ -1,11 +1,16 @@
 "use client";
 
 import React, { useEffect, useId, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Plus, Pencil, Trash2, X, Wallet } from "lucide-react";
 import {
   getConfiguracion,
   guardarConfiguracion,
+  getMetodosPago,
+  crearMetodoPago,
+  actualizarMetodoPago,
+  borrarMetodoPago,
   type ConfiguracionNegocio,
+  type MetodoPago,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
 import { ErrorState } from "@/components/error-state";
@@ -32,6 +37,61 @@ const MODELOS = [
   { slug: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6 — el más fino para vender (~$16 / 1.000)" },
   { slug: "openai/gpt-4.1", label: "GPT-4.1 (OpenAI) — equilibrado (~$10 / 1.000)" },
 ];
+
+// Tipos de método de pago que el bot ofrece y con los que reconoce los cobros.
+const TIPOS_METODO = [
+  { key: "Pago Móvil", campos: ["banco", "telefono", "cedula", "titular"] },
+  { key: "Transferencia", campos: ["banco", "telefono", "cedula", "titular"] },
+  { key: "Zelle", campos: ["correo", "titular"] },
+  { key: "Binance", campos: ["wallet", "correo"] },
+  { key: "Efectivo", campos: [] },
+  { key: "Otro", campos: ["instrucciones"] },
+] as const;
+
+// Etiqueta legible de cada campo de un método de pago.
+const ETIQUETA_CAMPO: Record<string, string> = {
+  banco: "Banco",
+  telefono: "Teléfono",
+  cedula: "Cédula / RIF",
+  titular: "Titular",
+  correo: "Correo",
+  wallet: "Billetera / Wallet",
+  instrucciones: "Instrucciones",
+};
+
+// Devuelve los campos relevantes para un tipo (si el tipo no está en la lista,
+// se muestran todos para no esconder datos cargados).
+function camposDeTipo(tipo: string): readonly string[] {
+  const t = TIPOS_METODO.find((x) => x.key === tipo);
+  return t ? t.campos : ["banco", "telefono", "cedula", "titular", "correo", "wallet", "instrucciones"];
+}
+
+type FormMetodo = {
+  id?: number;
+  tipo: string;
+  titulo: string;
+  titular: string;
+  banco: string;
+  telefono: string;
+  cedula: string;
+  correo: string;
+  wallet: string;
+  instrucciones: string;
+  activo: boolean;
+};
+
+const FORM_METODO_VACIO: FormMetodo = {
+  tipo: "Pago Móvil",
+  titulo: "",
+  titular: "",
+  banco: "",
+  telefono: "",
+  cedula: "",
+  correo: "",
+  wallet: "",
+  instrucciones: "",
+  activo: true,
+};
 
 // Deja solo los dígitos de un teléfono (acepta "+", espacios, guiones, paréntesis).
 function soloDigitos(crudo: string): string {
@@ -186,6 +246,8 @@ export default function ConfiguracionPage() {
             </div>
           </Seccion>
 
+          <MetodosPago />
+
           <Seccion
             titulo="Avisos a la dueña"
             nota="WhatsApp donde te llegan los avisos de pago. Debe ser DISTINTO al número del bot (un número no puede escribirse a sí mismo)."
@@ -260,6 +322,407 @@ function Campo({ label, children }: { label: string; children: React.ReactElemen
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-[13px] font-medium text-fg-muted">
+        {label}
+      </label>
+      {React.cloneElement(children, { id })}
+    </div>
+  );
+}
+
+// ─── Métodos de pago ──────────────────────────────────────────────────
+// Lista + alta/edición/baja de los métodos que el bot ofrece y con los que
+// reconoce los cobros. Vive dentro de Configuración (mismo molde "Sereno").
+
+function MetodosPago() {
+  const [items, setItems] = useState<MetodoPago[] | null>(null);
+  const [error, setError] = useState("");
+  const [cargaFallida, setCargaFallida] = useState(false);
+  const [form, setForm] = useState<FormMetodo | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [conmutando, setConmutando] = useState<number | null>(null);
+
+  function recargar() {
+    setError("");
+    setCargaFallida(false);
+    getMetodosPago()
+      .then((d) => {
+        setItems(d);
+        setError("");
+      })
+      .catch((e: Error) => {
+        setError(e.message);
+        if (items === null) setCargaFallida(true);
+      });
+  }
+  useEffect(recargar, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cerrar el modal con Escape (no cierra mientras guarda).
+  useEffect(() => {
+    if (!form) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !guardando) setForm(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [form, guardando]);
+
+  function abrirNuevo() {
+    setForm({ ...FORM_METODO_VACIO });
+  }
+
+  function abrirEditar(m: MetodoPago) {
+    setForm({
+      id: m.id,
+      tipo: m.tipo || "Pago Móvil",
+      titulo: m.titulo ?? "",
+      titular: m.titular ?? "",
+      banco: m.banco ?? "",
+      telefono: m.telefono ?? "",
+      cedula: m.cedula ?? "",
+      correo: m.correo ?? "",
+      wallet: m.wallet ?? "",
+      instrucciones: m.instrucciones ?? "",
+      activo: m.activo,
+    });
+  }
+
+  async function guardar() {
+    if (!form || !form.titulo.trim()) return;
+    setGuardando(true);
+    setError("");
+    // Solo enviamos los campos relevantes al tipo (los demás van vacíos).
+    const relevantes = camposDeTipo(form.tipo);
+    const body: Partial<MetodoPago> = {
+      tipo: form.tipo,
+      titulo: form.titulo.trim(),
+      activo: form.activo,
+      titular: relevantes.includes("titular") ? form.titular.trim() || null : null,
+      banco: relevantes.includes("banco") ? form.banco.trim() || null : null,
+      telefono: relevantes.includes("telefono") ? form.telefono.trim() || null : null,
+      cedula: relevantes.includes("cedula") ? form.cedula.trim() || null : null,
+      correo: relevantes.includes("correo") ? form.correo.trim() || null : null,
+      wallet: relevantes.includes("wallet") ? form.wallet.trim() || null : null,
+      instrucciones: relevantes.includes("instrucciones") ? form.instrucciones.trim() || null : null,
+    };
+    try {
+      if (form.id) await actualizarMetodoPago(form.id, body);
+      else await crearMetodoPago(body);
+      setForm(null);
+      recargar();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function borrar(m: MetodoPago) {
+    if (!window.confirm(`¿Eliminar el método "${m.titulo}"? El bot dejará de ofrecerlo.`)) return;
+    setError("");
+    try {
+      await borrarMetodoPago(m.id);
+      recargar();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function conmutarActivo(m: MetodoPago) {
+    setConmutando(m.id);
+    setError("");
+    try {
+      await actualizarMetodoPago(m.id, { activo: !m.activo });
+      recargar();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setConmutando(null);
+    }
+  }
+
+  const campos = form ? camposDeTipo(form.tipo) : [];
+
+  // Helper para mostrar el dato clave de cada método en su fila.
+  function valoresClave(m: MetodoPago): string {
+    return camposDeTipo(m.tipo)
+      .map((c) => (m[c as keyof MetodoPago] as string | null | undefined))
+      .filter((v): v is string => !!v && v.toString().trim().length > 0)
+      .join(" · ");
+  }
+
+  return (
+    <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold num-snug text-fg">Métodos de pago</h2>
+          <p className="mt-1 text-sm font-medium leading-relaxed text-fg-muted">
+            Estos son los métodos que el bot ofrece y con los que reconoce tus pagos.
+          </p>
+        </div>
+        <button
+          onClick={abrirNuevo}
+          className="focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          Agregar método
+        </button>
+      </div>
+
+      {items !== null && <ErrorBanner mensaje={error} />}
+
+      <div className="mt-4">
+        {items === null && cargaFallida ? (
+          <ErrorState mensaje={error} onRetry={recargar} />
+        ) : items === null ? (
+          <div className="space-y-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-bg-subtle ring-hair" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <p className="rounded-xl bg-bg-subtle/50 px-4 py-6 text-center text-sm font-medium text-fg-muted ring-hair">
+            Aún no hay métodos de pago. Agrega el primero para que el bot pueda cobrar.
+          </p>
+        ) : (
+          <ul className="space-y-2.5">
+            {items.map((m) => {
+              const clave = valoresClave(m);
+              return (
+                <li
+                  key={m.id}
+                  className="flex items-start justify-between gap-4 rounded-xl bg-bg-subtle/40 px-4 py-3 ring-hair"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/15">
+                      <Wallet className="h-[18px] w-[18px]" strokeWidth={2} />
+                    </div>
+                    <div className="min-w-0 leading-tight">
+                      <p className="font-bold text-fg">
+                        {m.titulo}
+                        <span className="ml-2 align-middle text-[12px] font-semibold text-fg-muted">
+                          {m.tipo}
+                        </span>
+                      </p>
+                      {clave && (
+                        <p className="mt-1 truncate text-[13px] font-medium text-fg-muted">{clave}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => conmutarActivo(m)}
+                      disabled={conmutando === m.id}
+                      role="switch"
+                      aria-checked={m.activo}
+                      aria-label={m.activo ? "Desactivar método" : "Activar método"}
+                      title={m.activo ? "Activo (clic para desactivar)" : "Inactivo (clic para activar)"}
+                      className={`focus-ring relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-50 ${
+                        m.activo ? "bg-accent" : "bg-borde"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                          m.activo ? "translate-x-[22px]" : "translate-x-0.5"
+                        }`}
+                      />
+                    </button>
+                    <button
+                      onClick={() => abrirEditar(m)}
+                      className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-bg-subtle hover:text-fg"
+                      title="Editar"
+                      aria-label="Editar"
+                    >
+                      <Pencil className="h-4 w-4" strokeWidth={1.8} />
+                    </button>
+                    <button
+                      onClick={() => borrar(m)}
+                      className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-red-50 hover:text-red-600"
+                      title="Eliminar"
+                      aria-label="Eliminar"
+                    >
+                      <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {form && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+          onClick={() => !guardando && setForm(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="metodo-modal-titulo"
+            className="w-full max-w-md rounded-2xl bg-bg p-6 shadow-soft ring-hair"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <h3 id="metodo-modal-titulo" className="text-lg font-semibold num-snug text-fg">
+                {form.id ? "Editar método" : "Agregar método"}
+              </h3>
+              <button
+                onClick={() => setForm(null)}
+                className="focus-ring rounded-lg p-1 text-fg-muted transition hover:bg-bg-subtle hover:text-fg"
+                aria-label="Cerrar"
+              >
+                <X className="h-5 w-5" strokeWidth={1.8} />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] space-y-3.5 overflow-y-auto pr-1">
+              <div>
+                <label htmlFor="metodo-tipo" className="mb-1 block text-[12px] font-semibold text-fg-muted">
+                  Tipo
+                </label>
+                <select
+                  id="metodo-tipo"
+                  className={inputCls}
+                  value={form.tipo}
+                  onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+                >
+                  {TIPOS_METODO.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.key}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="metodo-titulo" className="mb-1 block text-[12px] font-semibold text-fg-muted">
+                  Título
+                </label>
+                <input
+                  id="metodo-titulo"
+                  className={inputCls}
+                  value={form.titulo}
+                  onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                  placeholder="Ej. Pago Móvil Banesco"
+                />
+              </div>
+
+              {campos.includes("banco") && (
+                <CampoModal label={ETIQUETA_CAMPO.banco} id="metodo-banco">
+                  <input
+                    className={inputCls}
+                    value={form.banco}
+                    onChange={(e) => setForm({ ...form, banco: e.target.value })}
+                  />
+                </CampoModal>
+              )}
+              {campos.includes("telefono") && (
+                <CampoModal label={ETIQUETA_CAMPO.telefono} id="metodo-telefono">
+                  <input
+                    className={inputCls}
+                    value={form.telefono}
+                    onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                  />
+                </CampoModal>
+              )}
+              {campos.includes("cedula") && (
+                <CampoModal label={ETIQUETA_CAMPO.cedula} id="metodo-cedula">
+                  <input
+                    className={inputCls}
+                    value={form.cedula}
+                    onChange={(e) => setForm({ ...form, cedula: e.target.value })}
+                  />
+                </CampoModal>
+              )}
+              {campos.includes("titular") && (
+                <CampoModal label={ETIQUETA_CAMPO.titular} id="metodo-titular">
+                  <input
+                    className={inputCls}
+                    value={form.titular}
+                    onChange={(e) => setForm({ ...form, titular: e.target.value })}
+                  />
+                </CampoModal>
+              )}
+              {campos.includes("correo") && (
+                <CampoModal label={ETIQUETA_CAMPO.correo} id="metodo-correo">
+                  <input
+                    className={inputCls}
+                    value={form.correo}
+                    onChange={(e) => setForm({ ...form, correo: e.target.value })}
+                    placeholder="correo@ejemplo.com"
+                  />
+                </CampoModal>
+              )}
+              {campos.includes("wallet") && (
+                <CampoModal label={ETIQUETA_CAMPO.wallet} id="metodo-wallet">
+                  <input
+                    className={inputCls}
+                    value={form.wallet}
+                    onChange={(e) => setForm({ ...form, wallet: e.target.value })}
+                  />
+                </CampoModal>
+              )}
+              {campos.includes("instrucciones") && (
+                <CampoModal label={ETIQUETA_CAMPO.instrucciones} id="metodo-instrucciones">
+                  <textarea
+                    className={`${inputCls} resize-y`}
+                    rows={3}
+                    value={form.instrucciones}
+                    onChange={(e) => setForm({ ...form, instrucciones: e.target.value })}
+                    placeholder="Cómo debe pagar el cliente con este método."
+                  />
+                </CampoModal>
+              )}
+
+              <label className="flex items-center gap-2 pt-1 text-sm font-medium text-fg">
+                <input
+                  type="checkbox"
+                  className="focus-ring h-4 w-4 rounded border-borde text-accent"
+                  checked={form.activo}
+                  onChange={(e) => setForm({ ...form, activo: e.target.checked })}
+                />
+                Activo (el bot lo ofrece)
+              </label>
+            </div>
+
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={() => setForm(null)}
+                disabled={guardando}
+                className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-bg px-4 py-2.5 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={guardar}
+                disabled={guardando || !form.titulo.trim()}
+                className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+              >
+                {guardando ? "Guardando…" : "Guardar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Campo del modal de métodos (label + control). Usa id explícito porque varios
+// controles comparten el mismo molde dentro del diálogo.
+function CampoModal({
+  label,
+  id,
+  children,
+}: {
+  label: string;
+  id: string;
+  children: React.ReactElement<{ id?: string }>;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 block text-[12px] font-semibold text-fg-muted">
         {label}
       </label>
       {React.cloneElement(children, { id })}

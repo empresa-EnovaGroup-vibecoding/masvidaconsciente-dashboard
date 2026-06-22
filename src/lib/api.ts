@@ -137,6 +137,21 @@ export interface ConfiguracionNegocio {
   modelo_ia: string | null;
 }
 
+export interface MetodoPago {
+  id: number;
+  tipo: string;
+  titulo: string;
+  titular?: string | null;
+  banco?: string | null;
+  telefono?: string | null;
+  cedula?: string | null;
+  correo?: string | null;
+  wallet?: string | null;
+  instrucciones?: string | null;
+  activo: boolean;
+  orden: number;
+}
+
 export interface ReportePeriodo {
   ventas_usd: number;
   num_ventas: number;
@@ -214,6 +229,13 @@ export const getReporte = () => request<Reporte>("/api/reporte");
 export const getConfiguracion = () => request<ConfiguracionNegocio>("/api/configuracion");
 export const guardarConfiguracion = (valores: Partial<ConfiguracionNegocio>) =>
   request("/api/configuracion", { method: "PUT", body: JSON.stringify({ valores }) });
+export const getMetodosPago = () => request<MetodoPago[]>("/api/metodos-pago");
+export const crearMetodoPago = (b: Partial<MetodoPago>) =>
+  request("/api/metodos-pago", { method: "POST", body: JSON.stringify(b) });
+export const actualizarMetodoPago = (id: number, b: Partial<MetodoPago>) =>
+  request(`/api/metodos-pago/${id}`, { method: "PUT", body: JSON.stringify(b) });
+export const borrarMetodoPago = (id: number) =>
+  request(`/api/metodos-pago/${id}`, { method: "DELETE" });
 export const getTasa = () => request<EstadoTasa>("/api/tasa");
 export const guardarTasa = (datos: {
   margen_pct?: number;
