@@ -41,7 +41,7 @@ const MODELOS = [
 // Tipos de método de pago que el bot ofrece y con los que reconoce los cobros.
 const TIPOS_METODO = [
   { key: "Pago Móvil", campos: ["banco", "telefono", "cedula", "titular"] },
-  { key: "Transferencia", campos: ["banco", "telefono", "cedula", "titular"] },
+  { key: "Transferencia", campos: ["banco", "cuenta", "cedula", "titular"] },
   { key: "Zelle", campos: ["correo", "titular"] },
   { key: "Binance", campos: ["wallet", "correo"] },
   { key: "Efectivo", campos: [] },
@@ -53,6 +53,7 @@ const ETIQUETA_CAMPO: Record<string, string> = {
   banco: "Banco",
   telefono: "Teléfono",
   cedula: "Cédula / RIF",
+  cuenta: "Número de cuenta",
   titular: "Titular",
   correo: "Correo",
   wallet: "Billetera / Wallet",
@@ -63,7 +64,7 @@ const ETIQUETA_CAMPO: Record<string, string> = {
 // se muestran todos para no esconder datos cargados).
 function camposDeTipo(tipo: string): readonly string[] {
   const t = TIPOS_METODO.find((x) => x.key === tipo);
-  return t ? t.campos : ["banco", "telefono", "cedula", "titular", "correo", "wallet", "instrucciones"];
+  return t ? t.campos : ["banco", "telefono", "cedula", "cuenta", "titular", "correo", "wallet", "instrucciones"];
 }
 
 type FormMetodo = {
@@ -74,6 +75,7 @@ type FormMetodo = {
   banco: string;
   telefono: string;
   cedula: string;
+  cuenta: string;
   correo: string;
   wallet: string;
   instrucciones: string;
@@ -87,6 +89,7 @@ const FORM_METODO_VACIO: FormMetodo = {
   banco: "",
   telefono: "",
   cedula: "",
+  cuenta: "",
   correo: "",
   wallet: "",
   instrucciones: "",
@@ -379,6 +382,7 @@ function MetodosPago() {
       banco: m.banco ?? "",
       telefono: m.telefono ?? "",
       cedula: m.cedula ?? "",
+      cuenta: m.cuenta ?? "",
       correo: m.correo ?? "",
       wallet: m.wallet ?? "",
       instrucciones: m.instrucciones ?? "",
@@ -400,6 +404,7 @@ function MetodosPago() {
       banco: relevantes.includes("banco") ? form.banco.trim() || null : null,
       telefono: relevantes.includes("telefono") ? form.telefono.trim() || null : null,
       cedula: relevantes.includes("cedula") ? form.cedula.trim() || null : null,
+      cuenta: relevantes.includes("cuenta") ? form.cuenta.trim() || null : null,
       correo: relevantes.includes("correo") ? form.correo.trim() || null : null,
       wallet: relevantes.includes("wallet") ? form.wallet.trim() || null : null,
       instrucciones: relevantes.includes("instrucciones") ? form.instrucciones.trim() || null : null,
@@ -617,6 +622,16 @@ function MetodosPago() {
                   />
                 </CampoModal>
               )}
+              {campos.includes("cuenta") && (
+                <CampoModal label={ETIQUETA_CAMPO.cuenta} id="metodo-cuenta">
+                  <input
+                    className={inputCls}
+                    value={form.cuenta}
+                    onChange={(e) => setForm({ ...form, cuenta: e.target.value })}
+                    placeholder="Número de cuenta (ej. 01340188851881028171)"
+                  />
+                </CampoModal>
+              )}
               {campos.includes("telefono") && (
                 <CampoModal label={ETIQUETA_CAMPO.telefono} id="metodo-telefono">
                   <input
@@ -655,11 +670,15 @@ function MetodosPago() {
                 </CampoModal>
               )}
               {campos.includes("wallet") && (
-                <CampoModal label={ETIQUETA_CAMPO.wallet} id="metodo-wallet">
+                <CampoModal
+                  label={form.tipo === "Binance" ? "ID de Binance (UID)" : ETIQUETA_CAMPO.wallet}
+                  id="metodo-wallet"
+                >
                   <input
                     className={inputCls}
                     value={form.wallet}
                     onChange={(e) => setForm({ ...form, wallet: e.target.value })}
+                    placeholder={form.tipo === "Binance" ? "Ej. 326103739" : ""}
                   />
                 </CampoModal>
               )}

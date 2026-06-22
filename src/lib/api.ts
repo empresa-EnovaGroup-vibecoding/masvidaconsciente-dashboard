@@ -145,6 +145,7 @@ export interface MetodoPago {
   banco?: string | null;
   telefono?: string | null;
   cedula?: string | null;
+  cuenta?: string | null;
   correo?: string | null;
   wallet?: string | null;
   instrucciones?: string | null;
