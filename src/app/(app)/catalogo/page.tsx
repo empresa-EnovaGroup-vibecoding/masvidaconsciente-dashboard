@@ -10,8 +10,12 @@ import {
   subirCatalogoPdf,
   borrarCatalogoPdf,
   borrarProducto,
+  getMediaProducto,
+  subirMediaProducto,
+  borrarMedia,
   type Producto,
   type ProductoInput,
+  type ProductoMedia,
 } from "@/lib/api";
 import { formatUSD } from "@/lib/format";
 import { ErrorBanner } from "@/components/error-banner";
@@ -63,6 +67,8 @@ export default function CatalogoPage() {
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [pdfTiene, setPdfTiene] = useState<boolean | null>(null);
   const [pdfOcupado, setPdfOcupado] = useState(false);
+  const [media, setMedia] = useState<ProductoMedia[]>([]);
+  const [subiendoMedia, setSubiendoMedia] = useState(false);
 
   function recargar() {
     setError("");
@@ -127,6 +133,7 @@ export default function CatalogoPage() {
 
   function abrirNuevo() {
     setForm({ ...FORM_VACIO });
+    setMedia([]);
   }
 
   function abrirEditar(p: Producto) {
@@ -143,6 +150,10 @@ export default function CatalogoPage() {
       info: p.info || "",
       disponible: p.disponible,
     });
+    setMedia([]);
+    getMediaProducto(p.id)
+      .then(setMedia)
+      .catch(() => setMedia([]));
   }
 
   async function toggleDisponible(p: Producto) {
@@ -187,6 +198,33 @@ export default function CatalogoPage() {
       setError((e as Error).message);
     } finally {
       setOcupado(null);
+    }
+  }
+
+  async function onMediaSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length || !form?.id) return;
+    setSubiendoMedia(true);
+    setError("");
+    try {
+      for (const file of files) {
+        const nueva = await subirMediaProducto(form.id, file);
+        setMedia((prev) => [...prev, nueva]);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSubiendoMedia(false);
+    }
+  }
+
+  async function eliminarMedia(id: number) {
+    try {
+      await borrarMedia(id);
+      setMedia((prev) => prev.filter((m) => m.id !== id));
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
@@ -510,6 +548,62 @@ export default function CatalogoPage() {
                     placeholder="Alérgenos, variaciones, cualquier dato del producto…"
                   />
                 </Campo>
+              </div>
+
+              <div className="space-y-2 border-t border-borde/60 pt-3.5">
+                <p className="text-[12px] font-semibold text-fg">Fotos y videos</p>
+                {form.id ? (
+                  <>
+                    {media.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {media.map((m) => (
+                          <div
+                            key={m.id}
+                            className="group relative aspect-square overflow-hidden rounded-lg ring-hair"
+                          >
+                            {m.tipo === "video" ? (
+                              <video src={m.url} className="h-full w-full object-cover" muted />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={m.url} alt="" className="h-full w-full object-cover" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => eliminarMedia(m.id)}
+                              aria-label="Eliminar"
+                              className="absolute right-1 top-1 rounded-md bg-black/55 p-1 text-white opacity-0 transition group-hover:opacity-100"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label
+                      className={`focus-ring inline-flex cursor-pointer items-center gap-2 rounded-xl bg-bg px-3 py-2 text-[13px] font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle ${
+                        subiendoMedia ? "pointer-events-none opacity-50" : ""
+                      }`}
+                    >
+                      <Upload className="h-4 w-4" strokeWidth={1.8} />
+                      {subiendoMedia ? "Subiendo…" : "Agregar foto o video"}
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        multiple
+                        className="hidden"
+                        onChange={onMediaSelect}
+                        disabled={subiendoMedia}
+                      />
+                    </label>
+                    <p className="text-[11px] text-fg-faint">
+                      Fotos hasta 5 MB · videos MP4 hasta 16 MB (límite de WhatsApp).
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[12px] text-fg-faint">
+                    Guarda el producto primero para poder agregarle fotos y videos.
+                  </p>
+                )}
               </div>
 
               <label className="flex cursor-pointer items-center gap-2.5 pt-1 text-sm font-medium text-fg">

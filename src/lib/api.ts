@@ -94,6 +94,12 @@ export interface Producto {
   disponible: boolean;
 }
 
+export interface ProductoMedia {
+  id: number;
+  tipo: string; // 'imagen' | 'video'
+  url: string;
+}
+
 export interface Conversacion {
   telefono: string;
   nombre: string | null;
@@ -298,6 +304,25 @@ export const editarProducto = (id: number, data: ProductoInput) =>
   request(`/api/productos/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 export const borrarProducto = (id: number) =>
   request(`/api/productos/${id}`, { method: "DELETE" });
+export const getMediaProducto = (productoId: number) =>
+  request<ProductoMedia[]>(`/api/productos/${productoId}/media`);
+export async function subirMediaProducto(productoId: number, file: File): Promise<ProductoMedia> {
+  const token = getToken();
+  const fd = new FormData();
+  fd.append("archivo", file);
+  const res = await fetch(`${API_URL}/api/productos/${productoId}/media`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Error" }));
+    throw new Error(err.detail || "No se pudo subir el archivo");
+  }
+  return res.json();
+}
+export const borrarMedia = (mediaId: number) =>
+  request(`/api/media/${mediaId}`, { method: "DELETE" });
 export const getCatalogoPdf = () => request<{ tiene: boolean }>("/api/catalogo-pdf");
 export async function subirCatalogoPdf(file: File): Promise<void> {
   const token = getToken();
