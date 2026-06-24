@@ -87,6 +87,10 @@ export interface Producto {
   descripcion: string | null;
   precio: number | null;
   presentacion: string | null;
+  duracion: string | null;
+  se_congela: string | null;
+  apto_diabeticos: string | null;
+  info: string | null;
   disponible: boolean;
 }
 

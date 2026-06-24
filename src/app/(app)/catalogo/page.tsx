@@ -35,6 +35,10 @@ type FormState = {
   descripcion: string;
   precio: string;
   presentacion: string;
+  duracion: string;
+  se_congela: string;
+  apto_diabeticos: string;
+  info: string;
   disponible: boolean;
 };
 
@@ -44,6 +48,10 @@ const FORM_VACIO: FormState = {
   descripcion: "",
   precio: "",
   presentacion: "",
+  duracion: "",
+  se_congela: "",
+  apto_diabeticos: "",
+  info: "",
   disponible: true,
 };
 
@@ -129,6 +137,10 @@ export default function CatalogoPage() {
       descripcion: p.descripcion || "",
       precio: p.precio !== null ? String(p.precio) : "",
       presentacion: p.presentacion || "",
+      duracion: p.duracion || "",
+      se_congela: p.se_congela || "",
+      apto_diabeticos: p.apto_diabeticos || "",
+      info: p.info || "",
       disponible: p.disponible,
     });
   }
@@ -141,6 +153,10 @@ export default function CatalogoPage() {
       descripcion: p.descripcion,
       precio: p.precio,
       presentacion: p.presentacion,
+      duracion: p.duracion,
+      se_congela: p.se_congela,
+      apto_diabeticos: p.apto_diabeticos,
+      info: p.info,
       disponible: !p.disponible,
     };
     try {
@@ -193,6 +209,10 @@ export default function CatalogoPage() {
       descripcion: form.descripcion.trim() || null,
       precio,
       presentacion: form.presentacion.trim() || null,
+      duracion: form.duracion.trim() || null,
+      se_congela: form.se_congela.trim() || null,
+      apto_diabeticos: form.apto_diabeticos.trim() || null,
+      info: form.info.trim() || null,
       disponible: form.disponible,
     };
     try {
@@ -443,6 +463,54 @@ export default function CatalogoPage() {
                   placeholder="Ingredientes, beneficios..."
                 />
               </Campo>
+
+              <div className="space-y-3.5 border-t border-borde/60 pt-3.5">
+                <p className="text-[12px] font-semibold text-fg">
+                  Información para el bot
+                  <span className="ml-1 font-normal text-fg-faint">
+                    (datos de ESTE producto; el bot no los mezcla con otros)
+                  </span>
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Campo label="Duración" htmlFor="prod-duracion">
+                    <input
+                      id="prod-duracion"
+                      className={inputCls}
+                      value={form.duracion}
+                      onChange={(e) => setForm({ ...form, duracion: e.target.value })}
+                      placeholder="Ej. 1 mes en nevera"
+                    />
+                  </Campo>
+                  <Campo label="¿Se congela?" htmlFor="prod-congela">
+                    <input
+                      id="prod-congela"
+                      className={inputCls}
+                      value={form.se_congela}
+                      onChange={(e) => setForm({ ...form, se_congela: e.target.value })}
+                      placeholder="Ej. Sí, hasta 2 meses"
+                    />
+                  </Campo>
+                </div>
+                <Campo label="¿Apto para diabéticos?" htmlFor="prod-diabeticos">
+                  <input
+                    id="prod-diabeticos"
+                    className={inputCls}
+                    value={form.apto_diabeticos}
+                    onChange={(e) => setForm({ ...form, apto_diabeticos: e.target.value })}
+                    placeholder="Ej. Sí, con alulosa"
+                  />
+                </Campo>
+                <Campo label="Más información" htmlFor="prod-info">
+                  <textarea
+                    id="prod-info"
+                    className={`${inputCls} resize-none`}
+                    rows={3}
+                    value={form.info}
+                    onChange={(e) => setForm({ ...form, info: e.target.value })}
+                    placeholder="Alérgenos, variaciones, cualquier dato del producto…"
+                  />
+                </Campo>
+              </div>
 
               <label className="flex cursor-pointer items-center gap-2.5 pt-1 text-sm font-medium text-fg">
                 <input
