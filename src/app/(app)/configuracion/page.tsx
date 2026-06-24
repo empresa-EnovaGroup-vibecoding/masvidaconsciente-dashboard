@@ -32,8 +32,10 @@ const VACIO: ConfiguracionNegocio = {
 // Modelos que puede usar el bot para conversar. El slug es el identificador de
 // OpenRouter; la transcripción de notas de voz NO se ve afectada (va por Gemini).
 const MODELOS = [
-  { slug: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash — económico (~$2 / 1.000 msgs)" },
-  { slug: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5 — recomendado: listo y barato (~$5,5 / 1.000)" },
+  { slug: "deepseek/deepseek-v3.2", label: "DeepSeek V3.2 — el más barato y muy bueno (~$1 / 1.000 msgs)" },
+  { slug: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite — Gemini económico (~$1 / 1.000)" },
+  { slug: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash — equilibrio, multimodal (~$2 / 1.000)" },
+  { slug: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5 — confiable para cobrar (~$5,5 / 1.000)" },
   { slug: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6 — el más fino para vender (~$16 / 1.000)" },
   { slug: "openai/gpt-4.1", label: "GPT-4.1 (OpenAI) — equilibrado (~$10 / 1.000)" },
 ];
@@ -118,6 +120,8 @@ export default function ConfiguracionPage() {
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  // true cuando la dueña eligió "Personalizado" para pegar un ID de modelo a mano.
+  const [modeloCustom, setModeloCustom] = useState(false);
 
   function cargar() {
     setCargaFallida(false);
@@ -264,20 +268,48 @@ export default function ConfiguracionPage() {
 
           <Seccion
             titulo="Modelo de IA (avanzado)"
-            nota="El cerebro con el que el bot conversa. Si sientes que ignora matices (tono, qué producto es cuál), prueba uno más inteligente. Ojo: las notas de voz se transcriben siempre con Gemini — esto no las cambia."
+            nota="El cerebro con el que el bot conversa. Si sientes que ignora matices (tono, qué producto es cuál), prueba uno más inteligente. Elige uno de la lista o 'Personalizado' para pegar el ID exacto de cualquier modelo de openrouter.ai/models. Ojo: las notas de voz y la visión de comprobantes van siempre con Gemini — esto no las cambia."
           >
             <Campo label="Modelo del bot">
-              <select
-                className={inputCls}
-                value={datos.modelo_ia || "google/gemini-2.5-flash"}
-                onChange={(e) => set("modelo_ia", e.target.value)}
-              >
-                {MODELOS.map((m) => (
-                  <option key={m.slug} value={m.slug}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+              {(() => {
+                const actual = datos.modelo_ia || "google/gemini-2.5-flash";
+                const enLista = MODELOS.some((m) => m.slug === actual);
+                const mostrarCustom = modeloCustom || (!!datos.modelo_ia && !enLista);
+                return (
+                  <>
+                    <select
+                      className={inputCls}
+                      value={mostrarCustom ? "__custom__" : actual}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setModeloCustom(true);
+                          set("modelo_ia", "");
+                        } else {
+                          setModeloCustom(false);
+                          set("modelo_ia", e.target.value);
+                        }
+                      }}
+                    >
+                      {MODELOS.map((m) => (
+                        <option key={m.slug} value={m.slug}>
+                          {m.label}
+                        </option>
+                      ))}
+                      <option value="__custom__">
+                        Personalizado — pegar ID de OpenRouter…
+                      </option>
+                    </select>
+                    {mostrarCustom && (
+                      <input
+                        className={`${inputCls} mt-2`}
+                        value={datos.modelo_ia ?? ""}
+                        onChange={(e) => set("modelo_ia", e.target.value.trim())}
+                        placeholder="ej. deepseek/deepseek-v3.2"
+                      />
+                    )}
+                  </>
+                );
+              })()}
             </Campo>
           </Seccion>
 
