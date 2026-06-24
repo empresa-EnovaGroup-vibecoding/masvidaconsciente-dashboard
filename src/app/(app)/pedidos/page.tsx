@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShoppingBag, Trash2, MessageCircle, User, Pencil, Plus, X, Check, Lock } from "lucide-react";
+import { ShoppingBag, Trash2, MessageCircle, User, Pencil, Plus, X, Check } from "lucide-react";
 import {
   getPedidos,
   cambiarEstadoPedido,
@@ -50,18 +50,22 @@ export default function PedidosPage() {
     }
   }
 
-  async function eliminar(id: number) {
+  async function eliminar(p: Pedido) {
+    const aviso = p.pago_bloqueante
+      ? p.pago_bloqueante === "reportado"
+        ? "\n\n⚠️ Tiene un comprobante POR VERIFICAR: al eliminarlo, ese registro se va."
+        : "\n\n⚠️ Tiene un pago CONFIRMADO: al eliminarlo, esa venta sale de tus reportes."
+      : "";
     if (
       !window.confirm(
-        `¿Eliminar el pedido #${id}? Esta acción no se puede deshacer. ` +
-          `Si el pedido tiene un pago, lo recomendable es CANCELARLO, no eliminarlo.`,
+        `¿Eliminar el pedido #${p.id}? Esta acción no se puede deshacer.${aviso}`,
       )
     )
       return;
-    setOcupado(id);
+    setOcupado(p.id);
     setError("");
     try {
-      await borrarPedido(id);
+      await borrarPedido(p.id);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -95,6 +99,15 @@ export default function PedidosPage() {
       setError("El pedido debe tener al menos un producto.");
       return;
     }
+    const p = pedidos?.find((x) => x.id === id);
+    if (
+      p?.pago_bloqueante &&
+      !window.confirm(
+        "Este pedido ya tiene un pago. Si cambias los productos, el total puede no cuadrar " +
+          "con lo que pagó el cliente. ¿Guardar igual?",
+      )
+    )
+      return;
     setGuardandoItems(true);
     setError("");
     try {
@@ -135,11 +148,6 @@ export default function PedidosPage() {
         <div className="space-y-3">
           {pedidos.map((p) => {
             const est = estiloEstado(p.estado);
-            const bloqueado = !!p.pago_bloqueante;
-            const razonBloqueo =
-              p.pago_bloqueante === "reportado"
-                ? "Tiene un comprobante por verificar: confírmalo o recházalo en Pagos para poder editar o eliminar."
-                : "Tiene un pago confirmado: usa Cancelar (no se elimina, para conservar el historial de cobro).";
             return (
               <div key={p.id} className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
                 <div className="mb-4 flex items-start justify-between gap-4">
@@ -265,8 +273,8 @@ export default function PedidosPage() {
                       </button>
                     </div>
                     <p className="text-[12px] font-medium text-fg-faint">
-                      El total se recalcula con los precios del catálogo. No se puede editar si el
-                      pedido ya tiene un pago confirmado o por verificar.
+                      El total se recalcula con los precios del catálogo. Si este pedido ya tiene un
+                      pago, revisa que el monto siga cuadrando.
                     </p>
                   </div>
                 ) : (
@@ -287,69 +295,59 @@ export default function PedidosPage() {
                 {p.notas && <p className="mb-4 text-[13px] italic text-fg-muted">Nota: {p.notas}</p>}
 
                 {editando !== p.id && (
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <select
-                        aria-label="Cambiar estado del pedido"
-                        value={p.estado}
-                        disabled={ocupado === p.id}
-                        onChange={(e) => actualizar(p.id, e.target.value)}
-                        className="focus-ring rounded-xl bg-bg px-3 py-2 text-[13px] text-fg ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {!ESTADOS_PEDIDO_MANUALES.includes(p.estado) && (
-                          <option value={p.estado} disabled>
-                            {est.label}
-                          </option>
-                        )}
-                        {ESTADOS_PEDIDO_MANUALES.map((e) => (
-                          <option key={e} value={e}>
-                            {estiloEstado(e).label}
-                          </option>
-                        ))}
-                      </select>
-
-                      {p.estado !== "cancelado" && (
-                        <button
-                          type="button"
-                          disabled={ocupado === p.id || bloqueado}
-                          title={bloqueado ? razonBloqueo : undefined}
-                          onClick={() => abrirEditor(p)}
-                          className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-bg px-3 py-2 text-[13px] font-semibold text-fg-muted ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
-                          Editar
-                        </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      aria-label="Cambiar estado del pedido"
+                      value={p.estado}
+                      disabled={ocupado === p.id}
+                      onChange={(e) => actualizar(p.id, e.target.value)}
+                      className="focus-ring rounded-xl bg-bg px-3 py-2 text-[13px] text-fg ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {!ESTADOS_PEDIDO_MANUALES.includes(p.estado) && (
+                        <option value={p.estado} disabled>
+                          {est.label}
+                        </option>
                       )}
+                      {ESTADOS_PEDIDO_MANUALES.map((e) => (
+                        <option key={e} value={e}>
+                          {estiloEstado(e).label}
+                        </option>
+                      ))}
+                    </select>
 
-                      {p.estado !== "cancelado" && (
-                        <button
-                          type="button"
-                          disabled={ocupado === p.id}
-                          onClick={() => cancelar(p.id)}
-                          className="focus-ring rounded-xl bg-bg px-3 py-2 text-[13px] font-semibold text-fg-muted ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          Cancelar
-                        </button>
-                      )}
-
+                    {p.estado !== "cancelado" && (
                       <button
                         type="button"
-                        disabled={ocupado === p.id || bloqueado}
-                        title={bloqueado ? razonBloqueo : undefined}
-                        onClick={() => eliminar(p.id)}
-                        aria-label={`Eliminar pedido #${p.id}`}
-                        className="focus-ring inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={ocupado === p.id}
+                        onClick={() => abrirEditor(p)}
+                        className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-bg px-3 py-2 text-[13px] font-semibold text-fg-muted ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
-                        Eliminar
+                        <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
+                        Editar
                       </button>
-                    </div>
-                    {bloqueado && (
-                      <p className="flex items-center gap-1.5 text-[12px] font-medium text-fg-muted">
-                        <Lock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-                        {razonBloqueo}
-                      </p>
                     )}
+
+                    {p.estado !== "cancelado" && (
+                      <button
+                        type="button"
+                        disabled={ocupado === p.id}
+                        onClick={() => cancelar(p.id)}
+                        className="focus-ring rounded-xl bg-bg px-3 py-2 text-[13px] font-semibold text-fg-muted ring-1 ring-borde transition hover:bg-bg-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={ocupado === p.id}
+                      onClick={() => eliminar(p)}
+                      aria-label={`Eliminar pedido #${p.id}`}
+                      className="focus-ring inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+                      Eliminar
+                    </button>
                   </div>
                 )}
               </div>
