@@ -94,6 +94,7 @@ export interface Producto {
   apto_diabeticos: string | null;
   info: string | null;
   disponible: boolean;
+  imagen?: string | null; // URL de la primera foto (miniatura en la tarjeta); solo lectura
 }
 
 export interface ProductoMedia {

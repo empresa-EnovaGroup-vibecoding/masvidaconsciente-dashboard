@@ -216,6 +216,7 @@ export default function CatalogoPage() {
       setError((err as Error).message);
     } finally {
       setSubiendoMedia(false);
+      recargar(); // refresca la miniatura en la tarjeta del catálogo
     }
   }
 
@@ -223,6 +224,7 @@ export default function CatalogoPage() {
     try {
       await borrarMedia(id);
       setMedia((prev) => prev.filter((m) => m.id !== id));
+      recargar();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -362,6 +364,13 @@ export default function CatalogoPage() {
                       p.disponible ? "" : "opacity-60"
                     }`}
                   >
+                    {p.imagen && (
+                      <img
+                        src={p.imagen}
+                        alt={p.nombre}
+                        className="mb-3 h-32 w-full rounded-xl object-cover ring-1 ring-borde/60"
+                      />
+                    )}
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="font-bold text-fg">{p.nombre}</p>
                       <span className="shrink-0 text-sm font-bold text-accent num-snug tnum">
