@@ -78,6 +78,8 @@ export interface Pedido {
   total_usd: number;
   notas: string | null;
   fecha: string;
+  // Pago que impide editar/eliminar: 'confirmado' | 'parcial' | 'reportado' | null.
+  pago_bloqueante?: string | null;
 }
 
 export interface Producto {
@@ -208,6 +210,7 @@ export interface PedidoCliente {
 export interface ClienteDetalle {
   telefono: string;
   nombre: string | null;
+  puede_borrar?: boolean;
   notas: string | null;
   primera_interaccion: string;
   ultima_interaccion: string;

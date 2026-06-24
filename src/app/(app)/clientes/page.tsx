@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Search, Check, DollarSign, ShoppingBag, Trash2 } from "lucide-react";
+import { Users, Search, Check, DollarSign, ShoppingBag, Trash2, Lock } from "lucide-react";
 import {
   getClientes,
   getCliente,
@@ -320,16 +320,28 @@ export default function ClientesPage() {
                 <div className="mt-7 border-t border-borde pt-5">
                   <button
                     onClick={borrarClienteHandler}
-                    disabled={borrando}
-                    className="focus-ring inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 disabled:opacity-50"
+                    disabled={borrando || detalle.puede_borrar === false}
+                    title={
+                      detalle.puede_borrar === false
+                        ? "No se puede borrar: tiene pagos confirmados o por verificar."
+                        : undefined
+                    }
+                    className="focus-ring inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4" strokeWidth={2} />
                     {borrando ? "Borrando…" : "Borrar cliente"}
                   </button>
-                  <p className="mt-2 text-[13px] font-medium text-fg-muted">
-                    Borra su ficha, conversación y pedidos sin cobro (vuelve a ser cliente nuevo). No
-                    se borra si tiene pagos confirmados o por verificar.
-                  </p>
+                  {detalle.puede_borrar === false ? (
+                    <p className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-fg-muted">
+                      <Lock className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                      No se puede borrar: tiene pagos confirmados o por verificar. Primero cancela o
+                      cierra esos pagos (el dinero se conserva).
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-[13px] font-medium text-fg-muted">
+                      Borra su ficha, conversación y pedidos sin cobro (vuelve a ser cliente nuevo).
+                    </p>
+                  )}
                 </div>
               </div>
             )}
