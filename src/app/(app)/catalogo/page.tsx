@@ -384,10 +384,10 @@ export default function CatalogoPage() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="catalogo-modal-titulo"
-            className="w-full max-w-md rounded-2xl bg-bg p-6 shadow-soft ring-hair"
+            className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-bg shadow-soft ring-hair"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-5 flex items-center justify-between">
+            <div className="flex shrink-0 items-center justify-between p-6 pb-4">
               <h2 id="catalogo-modal-titulo" className="text-lg font-semibold num-snug text-fg">
                 {form.id ? "Editar producto" : "Nuevo producto"}
               </h2>
@@ -400,7 +400,7 @@ export default function CatalogoPage() {
               </button>
             </div>
 
-            <div className="space-y-3.5">
+            <div className="flex-1 space-y-3.5 overflow-y-auto px-6 pb-1">
               <Campo label="Nombre" htmlFor="prod-nombre">
                 <input
                   id="prod-nombre"
@@ -523,7 +523,7 @@ export default function CatalogoPage() {
               </label>
             </div>
 
-            <div className="mt-6 flex gap-2">
+            <div className="flex shrink-0 gap-2 p-6 pt-4">
               <button
                 onClick={() => setForm(null)}
                 disabled={guardando}
