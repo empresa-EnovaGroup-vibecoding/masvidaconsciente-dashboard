@@ -277,6 +277,16 @@ export const pausarBotCliente = (telefono: string, pausado: boolean) =>
     method: "PUT",
     body: JSON.stringify({ pausado }),
   });
+export const editarCliente = (
+  telefono: string,
+  datos: { nombre?: string | null; notas?: string | null },
+) =>
+  request(`/api/clientes/${encodeURIComponent(telefono)}`, {
+    method: "PUT",
+    body: JSON.stringify(datos),
+  });
+export const borrarCliente = (telefono: string) =>
+  request(`/api/clientes/${encodeURIComponent(telefono)}`, { method: "DELETE" });
 export const getBotEstado = () => request<{ activo: boolean }>("/api/bot-estado");
 export const guardarBotEstado = (activo: boolean) =>
   request<{ ok: boolean; activo: boolean }>("/api/bot-estado", {
@@ -297,6 +307,10 @@ export const getPedidos = () => request<Pedido[]>("/api/pedidos");
 export const cambiarEstadoPedido = (id: number, estado: string) =>
   request(`/api/pedidos/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
 export const borrarPedido = (id: number) => request(`/api/pedidos/${id}`, { method: "DELETE" });
+export const editarItemsPedido = (
+  id: number,
+  items: { producto: string; cantidad: number }[],
+) => request(`/api/pedidos/${id}/items`, { method: "PUT", body: JSON.stringify({ items }) });
 export const getProductos = () => request<Producto[]>("/api/productos");
 export const crearProducto = (data: ProductoInput) =>
   request<{ id: number }>("/api/productos", { method: "POST", body: JSON.stringify(data) });

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Search, Check, DollarSign, ShoppingBag } from "lucide-react";
+import { Users, Search, Check, DollarSign, ShoppingBag, Trash2 } from "lucide-react";
 import {
   getClientes,
   getCliente,
-  guardarNotasCliente,
+  editarCliente,
+  borrarCliente,
   type ClienteResumen,
   type ClienteDetalle,
 } from "@/lib/api";
@@ -23,9 +24,11 @@ export default function ClientesPage() {
   const [busqueda, setBusqueda] = useState("");
   const [activa, setActiva] = useState<string | null>(null);
   const [detalle, setDetalle] = useState<ClienteDetalle | null>(null);
+  const [nombre, setNombre] = useState("");
   const [notas, setNotas] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [notasOk, setNotasOk] = useState(false);
+  const [borrando, setBorrando] = useState(false);
 
   function cargar() {
     setErrorLista("");
@@ -46,6 +49,7 @@ export default function ClientesPage() {
     getCliente(telefono)
       .then((d) => {
         setDetalle(d);
+        setNombre(d.nombre ?? "");
         setNotas(d.notas ?? "");
       })
       .catch((e) => setErrorDetalle((e as Error).message));
@@ -55,17 +59,42 @@ export default function ClientesPage() {
     if (activa) abrir(activa);
   }
 
-  async function guardarNotas() {
+  async function guardarFicha() {
     if (!activa) return;
     setGuardando(true);
     setError("");
     try {
-      await guardarNotasCliente(activa, notas);
+      await editarCliente(activa, { nombre, notas });
       setNotasOk(true);
+      setDetalle((d) => (d ? { ...d, nombre: nombre.trim() || null, notas } : d));
+      cargar(); // refresca la lista para que el nombre corregido aparezca al instante
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function borrarClienteHandler() {
+    if (!activa) return;
+    const ok = window.confirm(
+      `¿Borrar a ${detalle?.nombre || activa}?\n\n` +
+        `Se borran su ficha, su conversación, sus pedidos SIN cobro y la memoria del bot ` +
+        `(volverá a tratarlo como cliente nuevo). Esto NO se puede deshacer.\n\n` +
+        `Si tiene pagos confirmados o por verificar, NO se borrará (el dinero se conserva).`,
+    );
+    if (!ok) return;
+    setBorrando(true);
+    setError("");
+    try {
+      await borrarCliente(activa);
+      setActiva(null);
+      setDetalle(null);
+      cargar();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBorrando(false);
     }
   }
 
@@ -213,8 +242,21 @@ export default function ClientesPage() {
                   </div>
                 </div>
 
-                {/* Notas internas */}
+                {/* Ficha editable: nombre + notas */}
                 <div className="mb-6">
+                  <label htmlFor="nombre-cliente" className="mb-1.5 block text-sm font-semibold text-fg">
+                    Nombre del cliente
+                  </label>
+                  <input
+                    id="nombre-cliente"
+                    value={nombre}
+                    onChange={(e) => {
+                      setNombre(e.target.value);
+                      setNotasOk(false);
+                    }}
+                    placeholder="Ej. María González"
+                    className="focus-ring mb-4 w-full rounded-xl bg-bg px-3 py-2 text-sm text-fg ring-1 ring-borde placeholder:text-fg-faint"
+                  />
                   <label htmlFor="notas-cliente" className="mb-1.5 block text-sm font-semibold text-fg">
                     Notas internas{" "}
                     <span className="font-medium text-fg-muted">(privadas — el cliente nunca las ve)</span>
@@ -232,11 +274,11 @@ export default function ClientesPage() {
                   />
                   <div className="mt-3 flex items-center gap-3">
                     <button
-                      onClick={guardarNotas}
+                      onClick={guardarFicha}
                       disabled={guardando}
                       className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
                     >
-                      {guardando ? "Guardando…" : "Guardar nota"}
+                      {guardando ? "Guardando…" : "Guardar cambios"}
                     </button>
                     {notasOk && !guardando && (
                       <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
@@ -273,6 +315,22 @@ export default function ClientesPage() {
                     ))}
                   </div>
                 )}
+
+                {/* Borrar / resetear cliente */}
+                <div className="mt-7 border-t border-borde pt-5">
+                  <button
+                    onClick={borrarClienteHandler}
+                    disabled={borrando}
+                    className="focus-ring inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" strokeWidth={2} />
+                    {borrando ? "Borrando…" : "Borrar cliente"}
+                  </button>
+                  <p className="mt-2 text-[13px] font-medium text-fg-muted">
+                    Borra su ficha, conversación y pedidos sin cobro (vuelve a ser cliente nuevo). No
+                    se borra si tiene pagos confirmados o por verificar.
+                  </p>
+                </div>
               </div>
             )}
           </div>
