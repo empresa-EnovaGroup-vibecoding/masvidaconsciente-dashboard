@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, BarChart3, ShoppingBag, Wallet, Coins, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut } from "lucide-react";
+import { LayoutGrid, BarChart3, ShoppingBag, Wallet, Coins, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut, Menu, X } from "lucide-react";
 import { clearToken, isLoggedIn, getPagos, getConfiguracion, type ConfiguracionNegocio } from "@/lib/api";
 
 const NAV = [
@@ -27,6 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [listo, setListo] = useState(false);
   const [pendientes, setPendientes] = useState(0);
   const [config, setConfig] = useState<ConfiguracionNegocio | null>(null);
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn()) router.replace("/login");
@@ -43,6 +44,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [listo, pathname]);
 
+  // En celular, cerrar el menú al cambiar de página.
+  useEffect(() => {
+    setMenuAbierto(false);
+  }, [pathname]);
+
   if (!listo) return null;
 
   function salir() {
@@ -56,7 +62,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <aside className="w-64 shrink-0 border-r border-borde/70 bg-bg/95 backdrop-blur flex flex-col">
+      {/* Fondo oscuro detrás del menú en celular */}
+      {menuAbierto && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setMenuAbierto(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Menú lateral: cajón deslizante en celular, fijo en computadora */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-borde/70 bg-bg transition-transform duration-200 md:static md:translate-x-0 ${
+          menuAbierto ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         <div className="flex items-center gap-3 px-5 pt-6 pb-5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent shadow-soft">
             <svg viewBox="0 0 24 24" className="h-6 w-6 text-accent-fg" fill="currentColor" aria-hidden="true">
@@ -68,6 +88,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <p className="font-extrabold text-[15px] num-snug text-fg">masvidaconsciente</p>
             <p className="text-xs font-medium text-fg-muted">Panel de la dueña</p>
           </div>
+          <button
+            onClick={() => setMenuAbierto(false)}
+            aria-label="Cerrar menú"
+            className="focus-ring ml-auto rounded-lg p-1.5 text-fg-muted hover:text-fg md:hidden"
+          >
+            <X className="h-5 w-5" strokeWidth={1.8} />
+          </button>
         </div>
 
         <nav aria-label="Navegación principal" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
@@ -77,6 +104,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={href}
                 href={href}
+                onClick={() => setMenuAbierto(false)}
                 aria-current={activo ? "page" : undefined}
                 className={`focus-ring flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                   activo
@@ -117,9 +145,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-8 py-8">{children}</div>
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Barra superior con hamburguesa (solo celular) */}
+        <header className="flex items-center gap-3 border-b border-borde/70 bg-bg px-4 py-3 md:hidden">
+          <button
+            onClick={() => setMenuAbierto(true)}
+            aria-label="Abrir menú"
+            className="focus-ring rounded-lg p-1.5 text-fg"
+          >
+            <Menu className="h-6 w-6" strokeWidth={1.8} />
+          </button>
+          <p className="font-extrabold num-snug text-fg">masvidaconsciente</p>
+          {pendientes > 0 && (
+            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">
+              {pendientes}
+            </span>
+          )}
+        </header>
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-6xl px-5 py-6 md:px-8 md:py-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }
