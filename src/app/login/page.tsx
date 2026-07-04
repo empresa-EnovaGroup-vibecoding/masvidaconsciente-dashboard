@@ -30,7 +30,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[360px]">
         <div className="flex flex-col items-center mb-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="Más Vida Consciente" className="h-24 w-24 object-contain mb-5" />
+          <img src="/logo.png" alt="Más Vida Consciente" className="h-24 w-24 object-contain mb-5" />
           <h1 className="text-xl font-semibold tracking-tight text-fg">masvidaconsciente</h1>
           <p className="text-sm text-fg-muted mt-1">Panel de gestión</p>
         </div>

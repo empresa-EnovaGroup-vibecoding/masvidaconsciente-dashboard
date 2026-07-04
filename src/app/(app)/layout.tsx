@@ -79,7 +79,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex items-center gap-3 px-5 pt-6 pb-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="Más Vida Consciente" className="h-11 w-11 shrink-0 object-contain" />
+          <img src="/logo.png" alt="Más Vida Consciente" className="h-11 w-11 shrink-0 object-contain" />
           <div className="leading-tight">
             <p className="font-extrabold text-[15px] num-snug text-fg">masvidaconsciente</p>
             <p className="text-xs font-medium text-fg-muted">Panel de la dueña</p>
@@ -152,7 +152,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Menu className="h-6 w-6" strokeWidth={1.8} />
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.jpg" alt="" className="h-8 w-8 object-contain" />
+          <img src="/logo.png" alt="" className="h-8 w-8 object-contain" />
           <p className="font-extrabold num-snug text-fg">masvidaconsciente</p>
           {pendientes > 0 && (
             <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">
