@@ -78,12 +78,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }`}
       >
         <div className="flex items-center gap-3 px-5 pt-6 pb-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent shadow-soft">
-            <svg viewBox="0 0 24 24" className="h-6 w-6 text-accent-fg" fill="currentColor" aria-hidden="true">
-              <path d="M5 19c0-7 5-12 14-13 0 9-5 14-12 14-1.6 0-2 0-2 0Z" />
-              <path d="M6 18.5C9.5 14 13 11.5 17 9.5" fill="none" stroke="hsl(152 45% 33%)" strokeWidth="1.3" strokeLinecap="round" />
-            </svg>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.jpg" alt="Más Vida Consciente" className="h-11 w-11 shrink-0 object-contain" />
           <div className="leading-tight">
             <p className="font-extrabold text-[15px] num-snug text-fg">masvidaconsciente</p>
             <p className="text-xs font-medium text-fg-muted">Panel de la dueña</p>
@@ -155,6 +151,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-6 w-6" strokeWidth={1.8} />
           </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.jpg" alt="" className="h-8 w-8 object-contain" />
           <p className="font-extrabold num-snug text-fg">masvidaconsciente</p>
           {pendientes > 0 && (
             <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">

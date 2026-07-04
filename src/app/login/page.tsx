@@ -29,17 +29,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-bg-subtle px-4">
       <div className="w-full max-w-[360px]">
         <div className="flex flex-col items-center mb-10">
-          <div className="h-11 w-11 rounded-2xl bg-accent flex items-center justify-center mb-5">
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-accent-fg">
-              <path
-                d="M11 20A7 7 0 0 1 4 13c0-4 3-7 8-9 1 5-1 9-4 11"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.jpg" alt="Más Vida Consciente" className="h-24 w-24 object-contain mb-5" />
           <h1 className="text-xl font-semibold tracking-tight text-fg">masvidaconsciente</h1>
           <p className="text-sm text-fg-muted mt-1">Panel de gestión</p>
         </div>
