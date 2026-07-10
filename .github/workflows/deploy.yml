@@ -1,0 +1,28 @@
+name: Auto-desplegar el panel (viejo + nuevo)
+
+# Cada vez que subes un cambio a la rama master, este flujo reconstruye el
+# PANEL (dashboard) en los DOS servidores automáticamente, sin darle a "Deploy"
+# a mano. Los tokens viven en los "Secrets" del repositorio
+# (Settings -> Secrets and variables -> Actions), NO están escritos aquí.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}   # También se puede lanzar a mano desde la pestaña "Actions".
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Servidor VIEJO (panel)
+        run: |
+          curl -fsS --max-time 90 \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_OLD_TOKEN }}" \
+            "http://2.25.139.106:8000/api/v1/deploy?uuid=jvlqemh8s225qjftsev7ss8n"
+
+      - name: Servidor NUEVO (panel)
+        if: always()   # Corre aunque el paso anterior falle, para no dejar un servidor sin actualizar.
+        run: |
+          curl -fsS --max-time 90 \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_NEW_TOKEN }}" \
+            "http://152.53.89.118:8000/api/v1/deploy?uuid=o1jo590exxeuco5s8j0arisy"
