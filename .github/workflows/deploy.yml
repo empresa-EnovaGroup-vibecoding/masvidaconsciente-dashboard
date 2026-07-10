@@ -16,13 +16,13 @@ jobs:
     steps:
       - name: Servidor VIEJO (panel)
         run: |
-          curl -fsS --max-time 90 \
+          curl -fsS --connect-timeout 20 --max-time 120 --retry 3 --retry-all-errors --retry-delay 5 \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_OLD_TOKEN }}" \
             "http://2.25.139.106:8000/api/v1/deploy?uuid=jvlqemh8s225qjftsev7ss8n"
 
       - name: Servidor NUEVO (panel)
         if: always()   # Corre aunque el paso anterior falle, para no dejar un servidor sin actualizar.
         run: |
-          curl -fsS --max-time 90 \
+          curl -fsS --connect-timeout 20 --max-time 120 --retry 3 --retry-all-errors --retry-delay 5 \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_NEW_TOKEN }}" \
             "http://152.53.89.118:8000/api/v1/deploy?uuid=o1jo590exxeuco5s8j0arisy"
