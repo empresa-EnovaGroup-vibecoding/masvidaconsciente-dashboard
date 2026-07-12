@@ -51,3 +51,16 @@ const MAPA_PAGO: Record<string, { cls: string; label: string }> = {
 export function estiloPago(estado: string): { cls: string; label: string } {
   return MAPA_PAGO[estado] ?? { cls: "bg-bg-subtle text-fg-muted ring-borde", label: estado };
 }
+
+// ─── Motivos por los que el BOT TE NECESITA (pide_ayuda) ─────────────────
+// La etiqueta legible la manda el bot (`motivo_texto`): aquí solo el color.
+const MAPA_MOTIVO: Record<string, string> = {
+  precio_del_dia: "bg-warn-bg text-warn ring-warn-border",
+  no_se: "bg-blue-50 text-blue-700 ring-blue-600/15",
+  pide_persona: "bg-indigo-50 text-indigo-700 ring-indigo-600/15",
+  reclamo: "bg-red-50 text-red-700 ring-red-600/15",
+};
+
+export function estiloMotivo(motivo: string): string {
+  return MAPA_MOTIVO[motivo] ?? "bg-bg-subtle text-fg-muted ring-borde";
+}

@@ -229,6 +229,29 @@ export interface Conocimiento {
 
 export type ConocimientoInput = Omit<Conocimiento, "id">;
 
+/** Un aviso de "el bot te necesita": el bot se calló en ese chat y te espera. */
+export interface Intervencion {
+  id: number;
+  cliente: string; // teléfono
+  nombre: string | null;
+  motivo: string; // precio_del_dia | no_se | pide_persona | reclamo
+  motivo_texto: string; // ya viene legible desde el bot
+  detalle: string | null;
+  mensaje_cliente: string | null;
+  estado: string; // pendiente | resuelta
+  fecha: string;
+}
+
+export type EstadoIntervencion = "pendiente" | "resuelta";
+
+/** Producto de PRECIO VARIABLE (su precio cambia de un día a otro) y lo que vale HOY. */
+export interface PrecioDiaProducto {
+  producto_id: number;
+  nombre: string;
+  presentacion: string | null;
+  precio_hoy: number | null;
+}
+
 export type ProductoInput = Omit<Producto, "id">;
 
 export interface GuiasMensajes {
@@ -379,6 +402,23 @@ export const verificarMonto = (id: number, monto_recibido: number) =>
   });
 export const reabrirPago = (id: number) => request(`/api/pagos/${id}/reabrir`, { method: "POST" });
 export const anularPago = (id: number) => request(`/api/pagos/${id}/anular`, { method: "POST" });
+
+// ─── "El bot te necesita": bandeja de avisos + precio del día ────────
+export const getIntervenciones = (estado: EstadoIntervencion = "pendiente") =>
+  request<Intervencion[]>(`/api/intervenciones?estado=${estado}`);
+/** La dueña ya atendió el chat: cierra el aviso y (por defecto) reactiva el bot. */
+export const resolverIntervencion = (id: number, reactivar = true) =>
+  request<{ ok: boolean; bot_reactivado: boolean }>(
+    `/api/intervenciones/${id}/resolver?reactivar=${reactivar}`,
+    { method: "POST" },
+  );
+export const getPreciosDia = () => request<PrecioDiaProducto[]>("/api/precio-dia");
+/** El precio vale SOLO por hoy: mañana el bot lo vuelve a preguntar. */
+export const guardarPrecioDia = (producto_id: number, precio: number, nota?: string | null) =>
+  request<{ ok: boolean; producto: string; precio_hoy: number }>("/api/precio-dia", {
+    method: "PUT",
+    body: JSON.stringify({ producto_id, precio, nota: nota ?? null }),
+  });
 
 /**
  * Descarga el comprobante (imagen/PDF) como blob usando el token Bearer y

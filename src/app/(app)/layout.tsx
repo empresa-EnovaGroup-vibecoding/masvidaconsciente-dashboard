@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, BarChart3, ShoppingBag, Wallet, Coins, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut, Menu, X } from "lucide-react";
-import { clearToken, isLoggedIn, getPagos, getConfiguracion, type ConfiguracionNegocio } from "@/lib/api";
+import { LayoutGrid, BellRing, BarChart3, ShoppingBag, Wallet, Coins, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut, Menu, X } from "lucide-react";
+import { clearToken, isLoggedIn, getPagos, getIntervenciones, getConfiguracion, type ConfiguracionNegocio } from "@/lib/api";
 
 const NAV = [
   { href: "/dashboard", label: "Resumen", icon: LayoutGrid },
+  { href: "/bandeja", label: "El bot te necesita", icon: BellRing },
   { href: "/reporte", label: "Reporte", icon: BarChart3 },
   { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
   { href: "/pagos", label: "Pagos", icon: Wallet },
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [listo, setListo] = useState(false);
   const [pendientes, setPendientes] = useState(0);
+  const [avisos, setAvisos] = useState(0);
   const [config, setConfig] = useState<ConfiguracionNegocio | null>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
 
@@ -36,12 +38,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!listo) return;
-    getPagos("reportado")
-      .then((p) => setPendientes(p.length))
-      .catch(() => setPendientes(0));
+    // Los contadores se refrescan solos: un aviso del bot ("te necesita") no
+    // sirve de nada si la dueña tiene que recargar la página para verlo.
+    function contar() {
+      getPagos("reportado")
+        .then((p) => setPendientes(p.length))
+        .catch(() => {});
+      getIntervenciones("pendiente")
+        .then((a) => setAvisos(a.length))
+        .catch(() => {});
+    }
+    contar();
     getConfiguracion()
       .then(setConfig)
       .catch(() => {});
+    const id = setInterval(contar, 45_000);
+    return () => clearInterval(id);
   }, [listo, pathname]);
 
   // En celular, cerrar el menú al cambiar de página.
@@ -115,6 +127,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     {pendientes}
                   </span>
                 )}
+                {label === "El bot te necesita" && avisos > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-50 px-1.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/15 tnum">
+                    {avisos}
+                  </span>
+                )}
                 {activo && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
               </Link>
             );
@@ -154,11 +171,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="" className="h-8 w-8 object-contain" />
           <p className="font-extrabold num-snug text-fg">masvidaconsciente</p>
-          {pendientes > 0 && (
-            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">
-              {pendientes}
-            </span>
-          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            {avisos > 0 && (
+              <Link
+                href="/bandeja"
+                aria-label={`${avisos} chats esperándote`}
+                className="focus-ring flex h-5 min-w-5 items-center justify-center rounded-full bg-red-50 px-1.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/15 tnum"
+              >
+                {avisos}
+              </Link>
+            )}
+            {pendientes > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">
+                {pendientes}
+              </span>
+            )}
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
