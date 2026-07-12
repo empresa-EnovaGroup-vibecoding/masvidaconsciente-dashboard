@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarDays, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Clock, Plus, Trash2 } from "lucide-react";
 import {
   getConfiguracion,
   guardarConfiguracion,
@@ -34,6 +34,7 @@ function fechaBonita(iso: string): string {
 
 export default function HorarioPage() {
   const [dias, setDias] = useState<string[] | null>(null);
+  const [horas, setHoras] = useState({ apertura: "08:00", cierre: "18:00", corte: "18:00" });
   const [feriados, setFeriados] = useState<Feriado[]>([]);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -43,19 +44,43 @@ export default function HorarioPage() {
   const cargar = useCallback(() => {
     setError("");
     getConfiguracion()
-      .then((c) =>
+      .then((c) => {
         setDias(
           (c.dias_entrega ?? "lunes,martes,miercoles,jueves,viernes,sabado")
             .split(",")
             .map((d) => d.trim())
             .filter(Boolean),
-        ),
-      )
+        );
+        setHoras({
+          apertura: c.hora_apertura || "08:00",
+          cierre: c.hora_cierre || "18:00",
+          corte: c.hora_corte || "18:00",
+        });
+      })
       .catch((e) => setError(e.message));
     getFeriados().then(setFeriados).catch(() => {});
   }, []);
 
   useEffect(cargar, [cargar]);
+
+  async function guardarHoras(cambio: Partial<typeof horas>) {
+    const nuevas = { ...horas, ...cambio };
+    setHoras(nuevas);
+    setGuardando(true);
+    setError("");
+    try {
+      await guardarConfiguracion({
+        hora_apertura: nuevas.apertura,
+        hora_cierre: nuevas.cierre,
+        hora_corte: nuevas.corte,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo guardar la hora");
+      cargar();
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   async function alternarDia(clave: string) {
     if (!dias) return;
@@ -144,6 +169,58 @@ export default function HorarioPage() {
                 );
               })}
             </div>
+          </section>
+
+          <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+            <div className="mb-1 flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15">
+                <Clock className="h-[18px] w-[18px]" strokeWidth={1.8} />
+              </div>
+              <h2 className="text-[17px] font-extrabold num-snug text-fg">Las horas</h2>
+            </div>
+            <p className="mb-5 text-[13px] font-medium text-fg-muted">
+              El bot responde a cualquier hora (un mensaje sin contestar de noche es una venta que
+              se va), pero <span className="font-semibold text-fg">sabe</span> cuándo estás abierta
+              y no promete lo que no puedes cumplir.
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-[12px] font-semibold text-fg-muted">Abro a las</span>
+                <input
+                  type="time"
+                  value={horas.apertura}
+                  onChange={(e) => guardarHoras({ apertura: e.target.value })}
+                  className={inputCls}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[12px] font-semibold text-fg-muted">Cierro a las</span>
+                <input
+                  type="time"
+                  value={horas.cierre}
+                  onChange={(e) => guardarHoras({ cierre: e.target.value })}
+                  className={inputCls}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[12px] font-semibold text-accent">
+                  Pedidos para HOY, hasta las
+                </span>
+                <input
+                  type="time"
+                  value={horas.corte}
+                  onChange={(e) => guardarHoras({ corte: e.target.value })}
+                  className={inputCls}
+                />
+              </label>
+            </div>
+            <p className="mt-3 text-[12px] font-medium text-fg-faint">
+              Pasada esa última hora, el bot <span className="font-semibold text-fg-muted">deja
+              de ofrecer el mismo día</span> y le propone al cliente el próximo día de entrega.
+              Si te queda muy justo, bájala (por ejemplo, a las 2:00 pm).
+              {guardando && <span className="ml-2 text-accent">Guardando…</span>}
+            </p>
           </section>
 
           <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">

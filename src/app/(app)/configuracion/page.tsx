@@ -27,6 +27,9 @@ const VACIO: ConfiguracionNegocio = {
   pago_movil_titular: "",
   dueno_telefono: "",
   dias_entrega: "",
+  hora_apertura: "",
+  hora_cierre: "",
+  hora_corte: "",
   modelo_ia: "",
 };
 

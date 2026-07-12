@@ -157,6 +157,11 @@ export interface ConfiguracionNegocio {
   // Días en que SÍ se entrega, separados por coma ("lunes,martes,..."). Es un candado: el bot
   // no puede prometer una fecha que caiga en un día que no está aquí.
   dias_entrega: string | null;
+  // Horario de atención (el bot responde igual fuera de hora, pero no promete entregas).
+  hora_apertura: string | null;
+  hora_cierre: string | null;
+  // Hasta qué hora se aceptan pedidos para el MISMO día. Es un candado del código.
+  hora_corte: string | null;
   // Modelo de IA con el que el bot conversa. Lo elige la proveedora.
   modelo_ia: string | null;
 }
