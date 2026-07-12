@@ -98,6 +98,9 @@ export interface Producto {
   se_congela: string | null;
   apto_diabeticos: string | null;
   info: string | null;
+  // Días de anticipación que necesita ESTE producto (0 = puede salir el mismo día si hay stock;
+  // las tortas y lo horneado, 2). El bot NO puede prometerlo para antes.
+  dias_anticipacion: number;
   disponible: boolean;
   imagen?: string | null; // URL de la primera foto (miniatura en la tarjeta); solo lectura
 }
@@ -151,8 +154,17 @@ export interface ConfiguracionNegocio {
   pago_movil_telefono: string | null;
   pago_movil_titular: string | null;
   dueno_telefono: string | null;
+  // Días en que SÍ se entrega, separados por coma ("lunes,martes,..."). Es un candado: el bot
+  // no puede prometer una fecha que caiga en un día que no está aquí.
+  dias_entrega: string | null;
   // Modelo de IA con el que el bot conversa. Lo elige la proveedora.
   modelo_ia: string | null;
+}
+
+/** Un día suelto en que el negocio NO entrega (viaje, feriado, vacaciones). */
+export interface Feriado {
+  fecha: string; // AAAA-MM-DD
+  motivo: string | null;
 }
 
 export interface MetodoPago {
@@ -371,6 +383,11 @@ export async function subirMediaProducto(productoId: number, file: File): Promis
 }
 export const borrarMedia = (mediaId: number) =>
   request(`/api/media/${mediaId}`, { method: "DELETE" });
+export const getFeriados = () => request<Feriado[]>("/api/feriados");
+export const crearFeriado = (fecha: string, motivo?: string | null) =>
+  request("/api/feriados", { method: "POST", body: JSON.stringify({ fecha, motivo: motivo ?? null }) });
+export const borrarFeriado = (fecha: string) =>
+  request(`/api/feriados/${fecha}`, { method: "DELETE" });
 export const getCatalogoPdf = () => request<{ tiene: boolean }>("/api/catalogo-pdf");
 export async function subirCatalogoPdf(file: File): Promise<void> {
   const token = getToken();

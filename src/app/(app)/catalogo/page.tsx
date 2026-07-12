@@ -40,6 +40,7 @@ type FormState = {
   precio: string;
   presentacion: string;
   duracion: string;
+  dias_anticipacion: string;
   se_congela: string;
   apto_diabeticos: string;
   info: string;
@@ -53,6 +54,7 @@ const FORM_VACIO: FormState = {
   precio: "",
   presentacion: "",
   duracion: "",
+  dias_anticipacion: "0",
   se_congela: "",
   apto_diabeticos: "",
   info: "",
@@ -145,6 +147,7 @@ export default function CatalogoPage() {
       precio: p.precio !== null ? String(p.precio) : "",
       presentacion: p.presentacion || "",
       duracion: p.duracion || "",
+      dias_anticipacion: String(p.dias_anticipacion ?? 0),
       se_congela: p.se_congela || "",
       apto_diabeticos: p.apto_diabeticos || "",
       info: p.info || "",
@@ -158,6 +161,8 @@ export default function CatalogoPage() {
 
   async function toggleDisponible(p: Producto) {
     setOcupado(p.id);
+    // OJO: esto reconstruye el producto ENTERO. Si se olvida un campo, un clic en "Agotado"
+    // lo BORRA de la base. Cada campo nuevo del producto tiene que aparecer aquí.
     const datos: ProductoInput = {
       nombre: p.nombre,
       categoria: p.categoria,
@@ -165,6 +170,7 @@ export default function CatalogoPage() {
       precio: p.precio,
       presentacion: p.presentacion,
       duracion: p.duracion,
+      dias_anticipacion: p.dias_anticipacion ?? 0,
       se_congela: p.se_congela,
       apto_diabeticos: p.apto_diabeticos,
       info: p.info,
@@ -250,6 +256,7 @@ export default function CatalogoPage() {
       precio,
       presentacion: form.presentacion.trim() || null,
       duracion: form.duracion.trim() || null,
+      dias_anticipacion: Math.max(0, Math.floor(Number(form.dias_anticipacion) || 0)),
       se_congela: form.se_congela.trim() || null,
       apto_diabeticos: form.apto_diabeticos.trim() || null,
       info: form.info.trim() || null,
@@ -528,6 +535,22 @@ export default function CatalogoPage() {
                       placeholder="Ej. 1 mes en nevera"
                     />
                   </Campo>
+                  <Campo
+                    label="Días de anticipación"
+                    htmlFor="prod-anticipacion"
+                    ayuda="Cuántos días necesitas para prepararlo. 0 = puede salir el mismo día (si tienes). El bot NO lo va a prometer para antes."
+                  >
+                    <input
+                      id="prod-anticipacion"
+                      type="number"
+                      min={0}
+                      max={30}
+                      className={inputCls}
+                      value={form.dias_anticipacion}
+                      onChange={(e) => setForm({ ...form, dias_anticipacion: e.target.value })}
+                      placeholder="0"
+                    />
+                  </Campo>
                   <Campo label="¿Se congela?" htmlFor="prod-congela">
                     <input
                       id="prod-congela"
@@ -653,10 +676,13 @@ function Campo({
   label,
   htmlFor,
   children,
+  ayuda,
 }: {
   label: string;
   htmlFor?: string;
   children: React.ReactNode;
+  /** Una línea que explica el campo. La dueña no es técnica: cada campo se explica solo. */
+  ayuda?: string;
 }) {
   return (
     <div>
@@ -664,6 +690,7 @@ function Campo({
         {label}
       </label>
       {children}
+      {ayuda && <p className="mt-1 text-[11px] font-medium text-fg-faint">{ayuda}</p>}
     </div>
   );
 }
