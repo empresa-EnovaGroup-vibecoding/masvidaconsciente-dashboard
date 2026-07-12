@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShoppingBag, Trash2, MessageCircle, User, Pencil, Plus, X, Check } from "lucide-react";
+import { ShoppingBag, Trash2, MessageCircle, User, Pencil, Plus, X, Check, CalendarClock } from "lucide-react";
 import {
   getPedidos,
   cambiarEstadoPedido,
@@ -25,7 +25,9 @@ export default function PedidosPage() {
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [editando, setEditando] = useState<number | null>(null);
-  const [itemsEdit, setItemsEdit] = useState<{ producto: string; cantidad: number }[]>([]);
+  const [itemsEdit, setItemsEdit] = useState<
+    { producto: string; cantidad: number; opciones?: string | null }[]
+  >([]);
   const [guardandoItems, setGuardandoItems] = useState(false);
 
   function cargar() {
@@ -81,7 +83,10 @@ export default function PedidosPage() {
 
   function abrirEditor(p: Pedido) {
     setEditando(p.id);
-    setItemsEdit(p.items.map((it) => ({ producto: it.producto, cantidad: it.cantidad })));
+    // `opciones` se arrastra tal cual: si no, editar el pedido BORRA el relleno del cliente.
+    setItemsEdit(
+      p.items.map((it) => ({ producto: it.producto, cantidad: it.cantidad, opciones: it.opciones ?? null })),
+    );
     setError("");
   }
 
@@ -94,7 +99,11 @@ export default function PedidosPage() {
   async function guardarItems(id: number) {
     const limpios = itemsEdit
       .filter((it) => it.producto.trim())
-      .map((it) => ({ producto: it.producto, cantidad: Math.max(1, Math.floor(it.cantidad || 1)) }));
+      .map((it) => ({
+        producto: it.producto,
+        cantidad: Math.max(1, Math.floor(it.cantidad || 1)),
+        opciones: it.opciones ?? null,
+      }));
     if (limpios.length === 0) {
       setError("El pedido debe tener al menos un producto.");
       return;
@@ -280,9 +289,17 @@ export default function PedidosPage() {
                 ) : (
                   <ul className="mb-4 space-y-1 text-[13px] text-fg-muted">
                     {p.items.map((it, i) => (
-                      <li key={i} className="flex justify-between">
+                      <li key={i} className="flex justify-between gap-3">
                         <span className="text-fg">
                           <span className="tnum">{it.cantidad}×</span> {it.producto}
+                          {it.presentacion && (
+                            <span className="text-fg-muted"> (paquete de {it.presentacion})</span>
+                          )}
+                          {it.opciones && (
+                            <span className="block text-[12px] font-medium text-accent">
+                              {it.opciones}
+                            </span>
+                          )}
                         </span>
                         {it.precio_unitario != null && (
                           <span className="tnum">{formatUSD(it.precio_unitario)}</span>
@@ -290,6 +307,15 @@ export default function PedidosPage() {
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {/* PARA CUÁNDO es. Antes no se guardaba: llegaba un pedido de $42 sin saber
+                    para qué día era, y el bot llegó a prometer domingos (que no se entrega). */}
+                {p.entrega && (
+                  <p className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-accent">
+                    <CalendarClock className="h-4 w-4" strokeWidth={2} />
+                    Entrega: {p.entrega}
+                  </p>
                 )}
 
                 {p.notas && <p className="mb-4 text-[13px] italic text-fg-muted">Nota: {p.notas}</p>}

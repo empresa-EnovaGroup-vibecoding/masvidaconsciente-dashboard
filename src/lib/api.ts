@@ -64,9 +64,12 @@ export interface Metricas {
 
 export interface ItemPedido {
   producto: string;
-  cantidad: number;
+  cantidad: number; // PAQUETES completos, nunca unidades sueltas
   precio_unitario: number | null;
   presentacion?: string | null;
+  // Lo que el cliente eligió dentro del paquete (relleno, masa, sabor). No cambia el precio,
+  // pero la dueña lo necesita para cocinar.
+  opciones?: string | null;
 }
 
 export interface Pedido {
@@ -77,6 +80,8 @@ export interface Pedido {
   items: ItemPedido[];
   total_usd: number;
   notas: string | null;
+  // Para cuándo y cómo lo quiere ("sábado en la tarde, delivery en Cabudare").
+  entrega?: string | null;
   fecha: string;
   // Pago que impide editar/eliminar: 'confirmado' | 'parcial' | 'reportado' | null.
   pago_bloqueante?: string | null;
@@ -336,7 +341,9 @@ export const cambiarEstadoPedido = (id: number, estado: string) =>
 export const borrarPedido = (id: number) => request(`/api/pedidos/${id}`, { method: "DELETE" });
 export const editarItemsPedido = (
   id: number,
-  items: { producto: string; cantidad: number }[],
+  // `opciones` viaja SIEMPRE: si el panel no lo reenvía, el relleno que eligió el cliente se
+  // PIERDE al editar el pedido y la dueña ya no sabe qué cocinar.
+  items: { producto: string; cantidad: number; opciones?: string | null }[],
 ) => request(`/api/pedidos/${id}/items`, { method: "PUT", body: JSON.stringify({ items }) });
 export const getProductos = () => request<Producto[]>("/api/productos");
 export const crearProducto = (data: ProductoInput) =>
