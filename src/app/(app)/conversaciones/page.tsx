@@ -128,7 +128,7 @@ function Conversaciones() {
 
   useEffect(() => {
     cargar();
-    const id = setInterval(cargar, 7000);
+    const id = setInterval(cargar, 3000);  // cada 3s: se siente en tiempo real (7s se sentía lento)
     return () => { clearInterval(id); };
   }, [cargar]);
 
@@ -147,7 +147,7 @@ function Conversaciones() {
   useEffect(() => {
     if (!activa) return;
     cargarHilo();
-    const id = setInterval(cargarHilo, 7000);
+    const id = setInterval(cargarHilo, 3000);  // el hilo abierto también, cada 3s
     return () => { clearInterval(id); };
   }, [activa, cargarHilo]);
 
