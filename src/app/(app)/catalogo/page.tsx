@@ -317,7 +317,11 @@ export default function CatalogoPage() {
   async function guardar() {
     if (!form || !form.nombre.trim()) return;
     let precio: number | null = null;
-    if (form.precio.trim() !== "") {
+    // 🔴 Con VARIOS tamaños el precio NO se manda desde aquí: vive en cada tamaño y el servidor
+    // (con razón) rechaza el intento. Pero el valor viejo seguía guardado por dentro aunque la
+    // casilla ya no se viera en pantalla, así que se enviaba igual y CUALQUIER cambio del
+    // producto (hasta borrar una línea de la descripción) fallaba... en silencio.
+    if (!variosTamanos && form.precio.trim() !== "") {
       const n = Number(form.precio);
       if (!Number.isFinite(n) || n <= 0) {
         setError("El precio debe ser un número mayor que 0. Déjalo vacío si quieres que diga \"consultar\".");
@@ -883,6 +887,14 @@ export default function CatalogoPage() {
                 Disponible para la venta
               </label>
             </div>
+
+            {/* EL ERROR, DENTRO de la ventana. Antes salía DETRÁS (en el fondo de la página):
+                le dabas a Guardar, no pasaba nada y no había forma de saber por qué. */}
+            {error && (
+              <div className="mx-6 mb-1 rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] font-medium text-red-700 ring-1 ring-inset ring-red-200">
+                {error}
+              </div>
+            )}
 
             <div className="flex shrink-0 gap-2 p-6 pt-4">
               <button
