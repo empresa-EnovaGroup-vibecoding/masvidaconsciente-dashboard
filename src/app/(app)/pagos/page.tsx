@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/empty-state";
  * no sirve porque no manda el token, y el comprobante es privado. */
 function Comprobante({ pago }: { pago: Pago }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [esPdf, setEsPdf] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -30,9 +31,9 @@ function Comprobante({ pago }: { pago: Pago }) {
     let objectUrl: string | null = null;
     let activo = true;
     getComprobanteUrl(pago.id)
-      .then((u) => {
+      .then(({ url: u, esPdf: pdf }) => {
         objectUrl = u;
-        if (activo) setUrl(u);
+        if (activo) { setUrl(u); setEsPdf(pdf); }
         else URL.revokeObjectURL(u);
       })
       .catch(() => setError(true));
@@ -54,6 +55,19 @@ function Comprobante({ pago }: { pago: Pago }) {
   }
   if (!url) {
     return <div className="h-44 w-full max-w-xs animate-pulse rounded-xl bg-bg-subtle ring-hair" />;
+  }
+  // Un comprobante puede venir en PDF: pintarlo con <img> daba una imagen ROTA.
+  if (esPdf) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-bg px-3.5 py-2.5 text-[13px] font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle"
+      >
+        Abrir el comprobante (PDF)
+      </a>
+    );
   }
   return (
     <a href={url} target="_blank" rel="noreferrer" className="inline-block">

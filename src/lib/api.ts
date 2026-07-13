@@ -117,6 +117,9 @@ export interface Conversacion {
   ultimo_mensaje: string | null;
   ultima_interaccion: string;
   bot_pausado: boolean;
+  /** "dueña" = lo tomaste TÚ · "bot" = el bot se pausó solo al escalarte algo */
+  pausado_por?: string | null;
+  no_leidos?: number;
 }
 
 export interface Mensaje {
@@ -127,6 +130,8 @@ export interface Mensaje {
   fecha: string;
   tipo?: string;
   media_id?: string | null;
+  /** true = ese mensaje trae un archivo que se puede ver (el comprobante del cliente) */
+  tiene_media?: boolean;
   /** enviado | entregado | leido | fallido. null = no lo enviamos nosotros. */
   estado?: string | null;
   error?: string | null;
@@ -142,11 +147,19 @@ export interface VentanaChat {
 export interface EstadoConversacion {
   telefono: string;
   nombre: string | null;
-  /** true = el bot está callado y respondes TÚ */
+  /** true = el bot no responde en ese chat */
   bot_pausado: boolean;
+  /** "dueña" = lo tomaste TÚ · "bot" = el bot se pausó solo al escalarte algo */
+  pausado_por?: string | null;
   no_leidos: number;
   ventana: VentanaChat;
   es_simulador: boolean;
+}
+
+/** Cuántos chats tienes tomados tú (el bot está callado ahí) y cuántos sin leer. */
+export interface ResumenChats {
+  chats_tomados: number;
+  chats_sin_leer: number;
 }
 
 export type EstadoPago = "reportado" | "confirmado" | "rechazado" | "parcial";
@@ -438,6 +451,27 @@ export const getMensajes = (telefono: string) =>
   request<Mensaje[]>(`/api/conversaciones/${telefono}`);
 export const borrarConversacion = (telefono: string) =>
   request(`/api/conversaciones/${encodeURIComponent(telefono)}`, { method: "DELETE" });
+export const getResumenChats = () => request<ResumenChats>("/api/conversaciones-resumen");
+export const marcarLeido = (telefono: string) =>
+  request(`/api/conversaciones/${encodeURIComponent(telefono)}/leido`, { method: "POST" });
+
+/**
+ * El archivo de UN mensaje del hilo (el comprobante que mandó el cliente). Igual que el de
+ * pagos: se descarga con el token y se convierte en objectURL. Un <img src> directo NO sirve
+ * (no manda el header Authorization) y el comprobante es privado: trae datos bancarios.
+ */
+export async function getMediaMensajeUrl(
+  mensajeId: number,
+): Promise<{ url: string; esPdf: boolean }> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/api/mensajes/${mensajeId}/media`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("No se pudo cargar el archivo");
+  const blob = await res.blob();
+  return { url: URL.createObjectURL(blob), esPdf: !blob.type.startsWith("image/") };
+}
+
 export const getEstadoConversacion = (telefono: string) =>
   request<EstadoConversacion>(`/api/conversaciones/${encodeURIComponent(telefono)}/estado`);
 /** TÚ le respondes al cliente por WhatsApp. El bot se calla solo en ese chat. */
@@ -486,12 +520,15 @@ export const guardarPrecioDia = (producto_id: number, precio: number, nota?: str
  * devuelve un objectURL. Un <img src> directo NO sirve porque no manda el
  * header Authorization, y el comprobante es privado (trae datos bancarios).
  */
-export async function getComprobanteUrl(pagoId: number): Promise<string> {
+export async function getComprobanteUrl(
+  pagoId: number,
+): Promise<{ url: string; esPdf: boolean }> {
   const token = getToken();
   const res = await fetch(`${API_URL}/api/pagos/${pagoId}/comprobante`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("No se pudo cargar el comprobante");
   const blob = await res.blob();
-  return URL.createObjectURL(blob);
+  // Un comprobante puede venir en PDF: pintarlo con <img> daba una imagen ROTA.
+  return { url: URL.createObjectURL(blob), esPdf: !blob.type.startsWith("image/") };
 }

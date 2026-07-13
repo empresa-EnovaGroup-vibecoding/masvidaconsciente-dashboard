@@ -2,17 +2,21 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageCircle, Bot, Trash2, Send, User, AlertTriangle, Clock } from "lucide-react";
+import { MessageCircle, Bot, Trash2, Send, User, AlertTriangle, Clock, FileText, HandHelping } from "lucide-react";
 import {
   getConversaciones,
   getMensajes,
   getEstadoConversacion,
+  getMediaMensajeUrl,
+  getResumenChats,
+  marcarLeido,
   responderCliente,
   pausarBotCliente,
   borrarConversacion,
   type Conversacion,
   type Mensaje,
   type EstadoConversacion,
+  type ResumenChats,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
 import { ErrorState } from "@/components/error-state";
@@ -28,6 +32,60 @@ function restante(minutos: number): string {
 
 function hora(fecha: string): string {
   return new Date(fecha).toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * El archivo que mandó el cliente (el comprobante del pago), DENTRO del chat.
+ * Se descarga con el token y se pinta como blob: un <img src> directo daría 401, y el
+ * comprobante es privado (trae datos bancarios). Un PDF no se puede pintar: va como enlace.
+ */
+function Adjunto({ mensajeId }: { mensajeId: number }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [esPdf, setEsPdf] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    let creada: string | null = null;
+    getMediaMensajeUrl(mensajeId)
+      .then(({ url: u, esPdf: pdf }) => {
+        if (!vivo) { URL.revokeObjectURL(u); return; }
+        creada = u;
+        setUrl(u);
+        setEsPdf(pdf);
+      })
+      .catch(() => { if (vivo) setError(true); });
+    return () => {
+      vivo = false;
+      if (creada) URL.revokeObjectURL(creada);  // sin esto, el navegador se llena de memoria
+    };
+  }, [mensajeId]);
+
+  if (error) {
+    return <p className="text-[12px] font-medium text-fg-muted">No se pudo cargar el archivo.</p>;
+  }
+  if (!url) {
+    return <div className="h-40 w-52 animate-pulse rounded-xl bg-bg-subtle" />;
+  }
+  if (!esPdf) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" className="focus-ring block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="Comprobante" className="max-h-56 rounded-xl object-contain ring-hair" />
+      </a>
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-bg px-3 py-2 text-[13px] font-semibold text-fg ring-1 ring-borde hover:bg-bg-subtle"
+    >
+      <FileText className="h-4 w-4" strokeWidth={1.8} />
+      Abrir el comprobante
+    </a>
+  );
 }
 
 /** `useSearchParams` obliga a un Suspense en Next 15: si no, el build falla. */
@@ -55,6 +113,7 @@ function Conversaciones() {
   const [errorHilo, setErrorHilo] = useState("");
   const [cambiandoPausa, setCambiandoPausa] = useState(false);
   const [borrando, setBorrando] = useState(false);
+  const [resumen, setResumen] = useState<ResumenChats | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLen = useRef(0);
 
@@ -62,6 +121,9 @@ function Conversaciones() {
     getConversaciones()
       .then((c) => { setConvs(c); setError(""); })
       .catch((e) => { setError((e as Error).message); });
+    // Cuántos chats tienes tomados. La pausa NO caduca sola (así lo decidiste): sin este
+    // aviso, un "ya te escribo" desde el celular deja el bot mudo en ese chat para siempre.
+    getResumenChats().then(setResumen).catch(() => { /* el aviso es secundario */ });
   }, []);
 
   useEffect(() => {
@@ -106,11 +168,16 @@ function Conversaciones() {
     setErrorEnvio("");
     setErrorHilo("");
     prevLen.current = 0;
+    void marcarLeido(telefono).then(cargar).catch(() => { /* no es crítico */ });
   }
 
   const convActiva = convs?.find((c) => c.telefono === activa) ?? null;
   // El estado del endpoint manda (es el que sabe de verdad); la lista es el respaldo.
   const pausado = estado?.bot_pausado ?? convActiva?.bot_pausado ?? false;
+  const porQuien = estado?.pausado_por ?? convActiva?.pausado_por ?? null;
+  // Son dos cosas MUY distintas: "lo tomé yo" vs "el bot se calló porque me necesita".
+  const loTomeYo = pausado && porQuien !== "bot";
+  const elBotPideAyuda = pausado && porQuien === "bot";
   const ventana = estado?.ventana;
   const puedeEscribir = !!ventana?.abierta && !estado?.es_simulador;
 
@@ -180,6 +247,20 @@ function Conversaciones() {
 
       <ErrorBanner mensaje={error} />
 
+      {!!resumen?.chats_tomados && (
+        <div className="mb-5 flex flex-wrap items-center gap-2 rounded-2xl bg-warn-bg px-4 py-3 text-[13px] font-medium text-warn ring-1 ring-inset ring-warn-border">
+          <User className="h-4 w-4 shrink-0" strokeWidth={2} />
+          <span>
+            El bot está callado en{" "}
+            <span className="font-bold">
+              {resumen.chats_tomados} {resumen.chats_tomados === 1 ? "chat" : "chats"}
+            </span>{" "}
+            porque los estás atendiendo tú. Ahí no responde a nadie hasta que le des{" "}
+            <span className="font-semibold">Devolver al bot</span>.
+          </span>
+        </div>
+      )}
+
       {error && convs === null ? (
         <ErrorState mensaje={error} onRetry={cargar} />
       ) : convs === null ? (
@@ -223,10 +304,18 @@ function Conversaciones() {
                         <p className="truncate font-bold text-fg">{c.nombre || c.telefono}</p>
                         <p className="mt-0.5 truncate text-[13px] font-medium text-fg-muted">{c.ultimo_mensaje || "—"}</p>
                       </div>
+                      {!!c.no_leidos && (
+                        <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-accent-fg tnum">
+                          {c.no_leidos}
+                        </span>
+                      )}
                       {c.bot_pausado && (
                         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-[11px] font-semibold text-warn ring-1 ring-inset ring-warn-border">
-                          <User className="h-3 w-3" strokeWidth={2} />
-                          Tú
+                          {c.pausado_por === "bot" ? (
+                            <><HandHelping className="h-3 w-3" strokeWidth={2} />Te necesita</>
+                          ) : (
+                            <><User className="h-3 w-3" strokeWidth={2} />Tú</>
+                          )}
                         </span>
                       )}
                     </button>
@@ -271,11 +360,18 @@ function Conversaciones() {
                   </div>
                 </div>
 
-                {pausado && (
+                {loTomeYo && (
                   <div className="mb-4 rounded-xl bg-warn-bg px-3 py-2.5 text-[13px] font-medium text-warn ring-1 ring-inset ring-warn-border">
                     Este chat lo estás atendiendo <span className="font-semibold">tú</span>: el bot no le
                     responde. Los demás clientes siguen atendidos. Cuando termines, dale{" "}
                     <span className="font-semibold">Devolver al bot</span>.
+                  </div>
+                )}
+                {elBotPideAyuda && (
+                  <div className="mb-4 rounded-xl bg-warn-bg px-3 py-2.5 text-[13px] font-medium text-warn ring-1 ring-inset ring-warn-border">
+                    <span className="font-semibold">El bot te necesita en este chat</span> y por eso dejó
+                    de responder (ya le dijo al cliente que le confirmas en un momento). Contéstale tú y,
+                    cuando termines, dale <span className="font-semibold">Devolver al bot</span>.
                   </div>
                 )}
 
@@ -302,6 +398,14 @@ function Conversaciones() {
                                         : "rounded-bl-md bg-bg-subtle text-fg ring-1 ring-inset ring-borde"
                                 }`}
                               >
+                                {/* El comprobante del cliente, DENTRO del chat: hasta ahora este
+                                    tramo del hilo estaba en blanco y había que responder a ciegas
+                                    justo en el momento del dinero. */}
+                                {m.tiene_media && m.id && (
+                                  <div className="mb-1.5">
+                                    <Adjunto mensajeId={m.id} />
+                                  </div>
+                                )}
                                 {m.contenido}
                               </div>
                               <p
