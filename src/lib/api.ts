@@ -560,7 +560,7 @@ export const resolverIntervencion = (id: number, reactivar = true) =>
 export const getPreciosDia = () => request<PrecioDiaProducto[]>("/api/precio-dia");
 /** El precio vale SOLO por hoy: mañana el bot lo vuelve a preguntar. */
 export const guardarPrecioDia = (variante_id: number, precio: number, nota?: string | null) =>
-  request<{ ok: boolean; producto: string; precio_hoy: number }>("/api/precio-dia", {
+  request<{ ok: boolean; precio_hoy: number }>("/api/precio-dia", {
     method: "PUT",
     body: JSON.stringify({ variante_id, precio, nota: nota ?? null }),
   });
