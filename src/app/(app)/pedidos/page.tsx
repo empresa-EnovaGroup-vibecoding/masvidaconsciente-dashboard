@@ -26,7 +26,12 @@ export default function PedidosPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [editando, setEditando] = useState<number | null>(null);
   const [itemsEdit, setItemsEdit] = useState<
-    { producto: string; cantidad: number; opciones?: string | null }[]
+    {
+      producto: string;
+      variante_id?: number | null;
+      cantidad: number;
+      opciones?: string | null;
+    }[]
   >([]);
   const [guardandoItems, setGuardandoItems] = useState(false);
 
@@ -85,7 +90,13 @@ export default function PedidosPage() {
     setEditando(p.id);
     // `opciones` se arrastra tal cual: si no, editar el pedido BORRA el relleno del cliente.
     setItemsEdit(
-      p.items.map((it) => ({ producto: it.producto, cantidad: it.cantidad, opciones: it.opciones ?? null })),
+      p.items.map((it) => ({
+        producto: it.producto,
+        // El TAMAÑO viaja tal cual: sin él, la API no sabría cuál de los tamaños se cobró.
+        variante_id: it.variante_id ?? null,
+        cantidad: it.cantidad,
+        opciones: it.opciones ?? null,
+      })),
     );
     setError("");
   }
@@ -101,6 +112,7 @@ export default function PedidosPage() {
       .filter((it) => it.producto.trim())
       .map((it) => ({
         producto: it.producto,
+        variante_id: it.variante_id ?? null,
         cantidad: Math.max(1, Math.floor(it.cantidad || 1)),
         opciones: it.opciones ?? null,
       }));

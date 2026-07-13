@@ -46,15 +46,15 @@ function PrecioDelDia({
   const [guardando, setGuardando] = useState<number | null>(null);
 
   async function guardar(p: PrecioDiaProducto) {
-    const n = Number(valores[p.producto_id]);
+    const n = Number(valores[p.variante_id]);
     if (!Number.isFinite(n) || n <= 0) {
       onError("Escribe un precio mayor que 0.");
       return;
     }
-    setGuardando(p.producto_id);
+    setGuardando(p.variante_id);
     try {
-      await guardarPrecioDia(p.producto_id, n);
-      setValores((v) => ({ ...v, [p.producto_id]: "" }));
+      await guardarPrecioDia(p.variante_id, n);
+      setValores((v) => ({ ...v, [p.variante_id]: "" }));
       onGuardado();
     } catch (e) {
       onError(e instanceof Error ? e.message : "No se pudo guardar el precio");
@@ -80,14 +80,21 @@ function PrecioDelDia({
       <ul className="space-y-2.5">
         {precios.map((p) => (
           <li
-            key={p.producto_id}
+            key={p.variante_id}
             className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl bg-bg-subtle p-3.5 ring-hair"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-fg">{p.nombre}</p>
-              {p.presentacion && (
-                <p className="truncate text-xs font-medium text-fg-muted">{p.presentacion}</p>
-              )}
+              <p className="truncate font-semibold text-fg">
+                {p.nombre}
+                {p.presentacion && (
+                  <span className="ml-1.5 rounded-md bg-bg px-1.5 py-0.5 text-[12px] font-bold text-fg-muted ring-1 ring-borde">
+                    {p.presentacion}
+                  </span>
+                )}
+              </p>
+              <p className="truncate text-xs font-medium text-fg-muted">
+                Cada tamaño tiene su precio
+              </p>
             </div>
 
             {p.precio_hoy !== null ? (
@@ -108,9 +115,9 @@ function PrecioDelDia({
                 min="0"
                 inputMode="decimal"
                 aria-label={`Precio de hoy de ${p.nombre}`}
-                value={valores[p.producto_id] ?? ""}
+                value={valores[p.variante_id] ?? ""}
                 onChange={(e) =>
-                  setValores((v) => ({ ...v, [p.producto_id]: e.target.value }))
+                  setValores((v) => ({ ...v, [p.variante_id]: e.target.value }))
                 }
                 onKeyDown={(e) => {
                   if (e.key === "Enter") guardar(p);
@@ -121,11 +128,11 @@ function PrecioDelDia({
               <button
                 onClick={() => guardar(p)}
                 disabled={
-                  guardando === p.producto_id || (valores[p.producto_id] ?? "").trim() === ""
+                  guardando === p.variante_id || (valores[p.variante_id] ?? "").trim() === ""
                 }
                 className="focus-ring shrink-0 rounded-xl bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
               >
-                {guardando === p.producto_id
+                {guardando === p.variante_id
                   ? "Guardando…"
                   : p.precio_hoy !== null
                     ? "Corregir"

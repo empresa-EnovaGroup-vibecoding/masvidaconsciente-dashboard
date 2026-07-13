@@ -64,6 +64,9 @@ export interface Metricas {
 
 export interface ItemPedido {
   producto: string;
+  /** El CÓDIGO DE BARRAS del tamaño: es lo que se cobró. Sin esto, al editar un pedido de un
+   *  producto con varios tamaños no se sabría cuál era (y adivinar era la fuga de la Kombucha). */
+  variante_id?: number | null;
   cantidad: number; // PAQUETES completos, nunca unidades sueltas
   precio_unitario: number | null;
   presentacion?: string | null;
@@ -87,6 +90,17 @@ export interface Pedido {
   pago_bloqueante?: string | null;
 }
 
+/** Un TAMAÑO de un producto: es lo que se COBRA (Kombucha 350ml $4 · 700ml $7). */
+export interface VarianteProducto {
+  id: number;
+  presentacion: string;
+  /** null = precio del día (lo pones cada día en "El bot te necesita") */
+  precio: number | null;
+  sabores: string | null;
+  disponible: boolean;
+  orden: number;
+}
+
 export interface Producto {
   id: number;
   nombre: string;
@@ -103,6 +117,16 @@ export interface Producto {
   dias_anticipacion: number;
   disponible: boolean;
   imagen?: string | null; // URL de la primera foto (miniatura en la tarjeta); solo lectura
+  /** Los TAMAÑOS. El precio vive AQUÍ: el campo `precio` de arriba ya no manda. */
+  variantes?: VarianteProducto[];
+}
+
+export interface VarianteInput {
+  presentacion: string;
+  precio: number | null;
+  sabores?: string | null;
+  disponible: boolean;
+  orden?: number;
 }
 
 export interface ProductoMedia {
@@ -306,6 +330,8 @@ export type EstadoIntervencion = "pendiente" | "resuelta";
 /** Producto de PRECIO VARIABLE (su precio cambia de un día a otro) y lo que vale HOY. */
 export interface PrecioDiaProducto {
   producto_id: number;
+  /** El precio del día es POR TAMAÑO: la torta de 250g y la de 1kg cuestan distinto. */
+  variante_id: number;
   nombre: string;
   presentacion: string | null;
   precio_hoy: number | null;
@@ -397,9 +423,33 @@ export const editarItemsPedido = (
   id: number,
   // `opciones` viaja SIEMPRE: si el panel no lo reenvía, el relleno que eligió el cliente se
   // PIERDE al editar el pedido y la dueña ya no sabe qué cocinar.
-  items: { producto: string; cantidad: number; opciones?: string | null }[],
+  // `variante_id` también: es el TAMAÑO que se cobró.
+  items: {
+    producto: string;
+    variante_id?: number | null;
+    cantidad: number;
+    opciones?: string | null;
+  }[],
 ) => request(`/api/pedidos/${id}/items`, { method: "PUT", body: JSON.stringify({ items }) });
 export const getProductos = () => request<Producto[]>("/api/productos");
+/** Marca un producto como agotado (o lo revive). Endpoint PROPIO: mandar el producto entero
+ * fallaría en los que tienen varios tamaños (el precio ya no se edita ahí). */
+export const marcarAgotado = (id: number, disponible: boolean) =>
+  request(`/api/productos/${id}/disponible`, {
+    method: "PATCH",
+    body: JSON.stringify({ disponible }),
+  });
+
+export const crearVariante = (productoId: number, data: VarianteInput) =>
+  request<{ id: number }>(`/api/productos/${productoId}/variantes`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+export const editarVariante = (id: number, data: VarianteInput) =>
+  request(`/api/variantes/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export const borrarVariante = (id: number) =>
+  request(`/api/variantes/${id}`, { method: "DELETE" });
+
 export const crearProducto = (data: ProductoInput) =>
   request<{ id: number }>("/api/productos", { method: "POST", body: JSON.stringify(data) });
 export const editarProducto = (id: number, data: ProductoInput) =>
@@ -509,10 +559,10 @@ export const resolverIntervencion = (id: number, reactivar = true) =>
   );
 export const getPreciosDia = () => request<PrecioDiaProducto[]>("/api/precio-dia");
 /** El precio vale SOLO por hoy: mañana el bot lo vuelve a preguntar. */
-export const guardarPrecioDia = (producto_id: number, precio: number, nota?: string | null) =>
+export const guardarPrecioDia = (variante_id: number, precio: number, nota?: string | null) =>
   request<{ ok: boolean; producto: string; precio_hoy: number }>("/api/precio-dia", {
     method: "PUT",
-    body: JSON.stringify({ producto_id, precio, nota: nota ?? null }),
+    body: JSON.stringify({ variante_id, precio, nota: nota ?? null }),
   });
 
 /**

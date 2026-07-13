@@ -6,6 +6,11 @@ import {
   getProductos,
   crearProducto,
   editarProducto,
+  marcarAgotado,
+  crearVariante,
+  editarVariante,
+  borrarVariante,
+  type VarianteProducto,
   getCatalogoPdf,
   subirCatalogoPdf,
   borrarCatalogoPdf,
@@ -71,6 +76,11 @@ export default function CatalogoPage() {
   const [pdfOcupado, setPdfOcupado] = useState(false);
   const [media, setMedia] = useState<ProductoMedia[]>([]);
   const [subiendoMedia, setSubiendoMedia] = useState(false);
+  // LOS TAMAÑOS del producto que se está editando. El precio vive AQUÍ.
+  const [tamanos, setTamanos] = useState<VarianteProducto[]>([]);
+  const [nuevoTam, setNuevoTam] = useState({ presentacion: "", precio: "" });
+  const [tamOcupado, setTamOcupado] = useState(false);
+  const variosTamanos = tamanos.length > 1;
 
   function recargar() {
     setError("");
@@ -136,6 +146,8 @@ export default function CatalogoPage() {
   function abrirNuevo() {
     setForm({ ...FORM_VACIO });
     setMedia([]);
+    setTamanos([]);
+    setNuevoTam({ presentacion: "", precio: "" });
   }
 
   function abrirEditar(p: Producto) {
@@ -154,30 +166,95 @@ export default function CatalogoPage() {
       disponible: p.disponible,
     });
     setMedia([]);
+    setTamanos(p.variantes ?? []);
+    setNuevoTam({ presentacion: "", precio: "" });
     getMediaProducto(p.id)
       .then(setMedia)
       .catch(() => setMedia([]));
   }
 
+  // ─── LOS TAMAÑOS (lo que se COBRA) ───────────────────────────────
+  function refrescarTamanos(productoId: number) {
+    getProductos()
+      .then((ps) => setTamanos(ps.find((x) => x.id === productoId)?.variantes ?? []))
+      .catch(() => {});
+    recargar();
+  }
+
+  async function agregarTamano() {
+    if (!form?.id) return;
+    const pres = nuevoTam.presentacion.trim();
+    if (!pres) {
+      setError("Ponle un nombre al tamaño (ej. 700ml, 1kg).");
+      return;
+    }
+    const precio = nuevoTam.precio.trim() === "" ? null : Number(nuevoTam.precio);
+    if (precio !== null && (!Number.isFinite(precio) || precio < 0)) {
+      setError("El precio de ese tamaño no es válido.");
+      return;
+    }
+    setTamOcupado(true);
+    setError("");
+    try {
+      await crearVariante(form.id, {
+        presentacion: pres,
+        precio,
+        disponible: true,
+        orden: tamanos.length,
+      });
+      setNuevoTam({ presentacion: "", precio: "" });
+      refrescarTamanos(form.id);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setTamOcupado(false);
+    }
+  }
+
+  async function guardarTamano(v: VarianteProducto, cambios: Partial<VarianteProducto>) {
+    if (!form?.id) return;
+    setTamOcupado(true);
+    setError("");
+    try {
+      const nuevo = { ...v, ...cambios };
+      await editarVariante(v.id, {
+        presentacion: nuevo.presentacion,
+        precio: nuevo.precio,
+        sabores: nuevo.sabores,
+        disponible: nuevo.disponible,
+        orden: nuevo.orden,
+      });
+      refrescarTamanos(form.id);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setTamOcupado(false);
+    }
+  }
+
+  async function quitarTamano(v: VarianteProducto) {
+    if (!form?.id) return;
+    if (!window.confirm(`¿Quitar el tamaño "${v.presentacion}"?`)) return;
+    setTamOcupado(true);
+    setError("");
+    try {
+      await borrarVariante(v.id);
+      refrescarTamanos(form.id);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setTamOcupado(false);
+    }
+  }
+
   async function toggleDisponible(p: Producto) {
     setOcupado(p.id);
-    // OJO: esto reconstruye el producto ENTERO. Si se olvida un campo, un clic en "Agotado"
-    // lo BORRA de la base. Cada campo nuevo del producto tiene que aparecer aquí.
-    const datos: ProductoInput = {
-      nombre: p.nombre,
-      categoria: p.categoria,
-      descripcion: p.descripcion,
-      precio: p.precio,
-      presentacion: p.presentacion,
-      duracion: p.duracion,
-      dias_anticipacion: p.dias_anticipacion ?? 0,
-      se_congela: p.se_congela,
-      apto_diabeticos: p.apto_diabeticos,
-      info: p.info,
-      disponible: !p.disponible,
-    };
+    // Endpoint PROPIO: solo toca "agotado". Antes esto reconstruía el producto ENTERO y lo
+    // mandaba de vuelta: bastaba olvidar un campo para que un clic en "Agotado" lo BORRARA de
+    // la base. Y con los tamaños sería peor: mandaba un `precio` que el backend ya rechaza en
+    // los productos de varios tamaños → marcar agotada la Kombucha habría FALLADO.
     try {
-      await editarProducto(p.id, datos);
+      await marcarAgotado(p.id, !p.disponible);
       setProductos((prev) =>
         prev ? prev.map((x) => (x.id === p.id ? { ...x, disponible: !x.disponible } : x)) : prev,
       );
@@ -381,10 +458,27 @@ export default function CatalogoPage() {
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="font-bold text-fg">{p.nombre}</p>
                       <span className="shrink-0 text-sm font-bold text-accent num-snug tnum">
-                        {p.precio !== null ? formatUSD(p.precio) : "consultar"}
+                        {(p.variantes?.length ?? 0) > 1
+                          ? `${p.variantes!.length} tamaños`
+                          : p.variantes?.[0]?.precio != null
+                            ? formatUSD(p.variantes[0].precio!)
+                            : p.precio !== null
+                              ? formatUSD(p.precio)
+                              : "precio del día"}
                       </span>
                     </div>
-                    {p.presentacion && (
+                    {(p.variantes?.length ?? 0) > 1 ? (
+                      <p className="mt-0.5 flex flex-wrap gap-1 text-[12px] font-medium text-fg-faint">
+                        {p.variantes!.map((v) => (
+                          <span
+                            key={v.id}
+                            className="rounded-md bg-bg-subtle px-1.5 py-0.5 ring-1 ring-borde tnum"
+                          >
+                            {v.presentacion} {v.precio != null ? formatUSD(v.precio) : "precio del día"}
+                          </span>
+                        ))}
+                      </p>
+                    ) : p.presentacion && (
                       <p className="mt-0.5 text-[12px] font-medium text-fg-faint">{p.presentacion}</p>
                     )}
                     {p.descripcion && (
@@ -483,18 +577,28 @@ export default function CatalogoPage() {
                     ))}
                   </select>
                 </Campo>
-                <Campo label="Precio (USD)" htmlFor="prod-precio">
-                  <input
-                    id="prod-precio"
-                    className={inputCls}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.precio}
-                    onChange={(e) => setForm({ ...form, precio: e.target.value })}
-                    placeholder="0.00"
-                  />
-                </Campo>
+                {variosTamanos ? (
+                  <Campo label="Precio (USD)" htmlFor="prod-precio">
+                    <p className="rounded-xl bg-bg-subtle px-3 py-2.5 text-[13px] font-medium text-fg-muted ring-1 ring-inset ring-borde">
+                      Este producto tiene varios tamaños y{" "}
+                      <span className="font-semibold text-fg">cada uno tiene su precio</span>.
+                      Edítalos abajo, en Tamaños.
+                    </p>
+                  </Campo>
+                ) : (
+                  <Campo label="Precio (USD)" htmlFor="prod-precio">
+                    <input
+                      id="prod-precio"
+                      className={inputCls}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={form.precio}
+                      onChange={(e) => setForm({ ...form, precio: e.target.value })}
+                      placeholder="Déjalo vacío si el precio cambia cada día"
+                    />
+                  </Campo>
+                )}
               </div>
 
               <Campo label="Presentación" htmlFor="prod-presentacion">
@@ -583,6 +687,110 @@ export default function CatalogoPage() {
               </div>
 
               <div className="space-y-2 border-t border-borde/60 pt-3.5">
+                {/* LOS TAMAÑOS. El precio vive aquí: la Kombucha de 350ml cuesta $4 y la
+                    de 700ml $7. Antes había que crear DOS productos con el mismo nombre, y el
+                    bot cobraba siempre el del primero. */}
+                {form.id && (
+                  <div className="rounded-2xl bg-bg-subtle p-4 ring-1 ring-borde">
+                    <p className="text-[12px] font-semibold text-fg">Tamaños y precios</p>
+                    <p className="mt-0.5 text-[12px] font-medium text-fg-muted">
+                      Cada tamaño tiene <span className="font-semibold">su</span> precio. Si el
+                      precio cambia de un día a otro, deja el precio vacío: te lo preguntará en
+                      «El bot te necesita».
+                    </p>
+
+                    <ul className="mt-3 space-y-2">
+                      {tamanos.map((v) => (
+                        <li key={v.id} className="flex flex-wrap items-center gap-2">
+                          <input
+                            className={`${inputCls} h-9 flex-1 min-w-28`}
+                            defaultValue={v.presentacion}
+                            onBlur={(e) => {
+                              const val = e.target.value.trim();
+                              if (val && val !== v.presentacion)
+                                void guardarTamano(v, { presentacion: val });
+                            }}
+                            aria-label="Nombre del tamaño"
+                          />
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[13px] font-medium text-fg-muted">$</span>
+                            <input
+                              className={`${inputCls} h-9 w-24 tnum`}
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              defaultValue={v.precio ?? ""}
+                              placeholder="del día"
+                              onBlur={(e) => {
+                                const t = e.target.value.trim();
+                                const nuevo = t === "" ? null : Number(t);
+                                if (nuevo !== v.precio) void guardarTamano(v, { precio: nuevo });
+                              }}
+                              aria-label="Precio del tamaño"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={tamOcupado}
+                            onClick={() => void guardarTamano(v, { disponible: !v.disponible })}
+                            className={`focus-ring rounded-lg px-2.5 py-1.5 text-[12px] font-semibold ring-1 transition disabled:opacity-50 ${
+                              v.disponible
+                                ? "bg-bg text-fg-muted ring-borde hover:bg-bg-subtle"
+                                : "bg-warn-bg text-warn ring-warn-border"
+                            }`}
+                          >
+                            {v.disponible ? "Disponible" : "Agotado"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={tamOcupado || tamanos.length <= 1}
+                            onClick={() => void quitarTamano(v)}
+                            title={
+                              tamanos.length <= 1
+                                ? "No puedes quitar el único tamaño: el producto quedaría sin precio"
+                                : "Quitar este tamaño"
+                            }
+                            className="focus-ring rounded-lg px-2.5 py-1.5 text-[12px] font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 disabled:opacity-30"
+                          >
+                            Quitar
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-borde/60 pt-3">
+                      <input
+                        className={`${inputCls} h-9 flex-1 min-w-28`}
+                        value={nuevoTam.presentacion}
+                        onChange={(e) =>
+                          setNuevoTam({ ...nuevoTam, presentacion: e.target.value })
+                        }
+                        placeholder="Otro tamaño (ej. 700ml, 1kg)"
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[13px] font-medium text-fg-muted">$</span>
+                        <input
+                          className={`${inputCls} h-9 w-24 tnum`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={nuevoTam.precio}
+                          onChange={(e) => setNuevoTam({ ...nuevoTam, precio: e.target.value })}
+                          placeholder="del día"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={tamOcupado}
+                        onClick={() => void agregarTamano()}
+                        className="focus-ring rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+                      >
+                        Agregar tamaño
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <p className="text-[12px] font-semibold text-fg">Fotos y videos</p>
                 {form.id ? (
                   <>
