@@ -1,27 +1,38 @@
-name: Auto-desplegar el panel (viejo + nuevo)
+name: Desplegar el panel (taller en cada push · producción a mano)
 
-# Cada vez que subes un cambio a la rama master, este flujo reconstruye el
-# PANEL (dashboard) en los DOS servidores automáticamente, sin darle a "Deploy"
-# a mano. Los tokens viven en los "Secrets" del repositorio
-# (Settings -> Secrets and variables -> Actions), NO están escritos aquí.
+# ANTES: cada push a master reconstruía el panel en LOS DOS servidores a la vez, así que
+# no se podía probar en el taller sin tocar producción. (Deuda A1 de la auditoría 2026-07-13.)
+#
+# AHORA:
+#   • Un push a master  ->  despliega SOLO el TALLER (Hostinger viejo, el número de pruebas).
+#   • Producción (netcup, clientes reales)  ->  SOLO a mano: se lanza este flujo desde la
+#     pestaña "Actions" con la casilla "produccion" marcada (o con `gh workflow run deploy.yml
+#     -f produccion=true`). Así producción NUNCA se toca sin que un humano lo decida.
+#
+# Los tokens viven en los "Secrets" del repositorio (Settings -> Secrets and variables -> Actions).
 
 on:
   push:
     branches: [master]
-  workflow_dispatch: {}   # También se puede lanzar a mano desde la pestaña "Actions".
+  workflow_dispatch:
+    inputs:
+      produccion:
+        description: 'Marca esta casilla para desplegar TAMBIÉN a producción (netcup, clientes reales). Sin marcar = solo el taller.'
+        type: boolean
+        default: false
 
 jobs:
   desplegar:
     runs-on: ubuntu-latest
     steps:
-      - name: Servidor VIEJO (panel)
+      - name: TALLER (siempre — Hostinger viejo, tu número de pruebas)
         run: |
           curl -fsS --connect-timeout 20 --max-time 120 --retry 3 --retry-all-errors --retry-delay 5 \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_OLD_TOKEN }}" \
             "http://2.25.139.106:8000/api/v1/deploy?uuid=jvlqemh8s225qjftsev7ss8n"
 
-      - name: Servidor NUEVO (panel)
-        if: always()   # Corre aunque el paso anterior falle, para no dejar un servidor sin actualizar.
+      - name: PRODUCCIÓN (solo a mano y con la casilla marcada — netcup, clientes reales)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.produccion }}
         run: |
           curl -fsS --connect-timeout 20 --max-time 120 --retry 3 --retry-all-errors --retry-delay 5 \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_NEW_TOKEN }}" \
