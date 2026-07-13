@@ -317,11 +317,10 @@ export default function CatalogoPage() {
   async function guardar() {
     if (!form || !form.nombre.trim()) return;
     let precio: number | null = null;
-    // 🔴 Con VARIOS tamaños el precio NO se manda desde aquí: vive en cada tamaño y el servidor
-    // (con razón) rechaza el intento. Pero el valor viejo seguía guardado por dentro aunque la
-    // casilla ya no se viera en pantalla, así que se enviaba igual y CUALQUIER cambio del
-    // producto (hasta borrar una línea de la descripción) fallaba... en silencio.
-    if (!variosTamanos && form.precio.trim() !== "") {
+    // 🔴 FUGA B4: el precio SOLO se manda al CREAR (siembra el primer tamaño). Al EDITAR vive en
+    // cada tamaño y se edita en la sección Tamaños; mandarlo desde aquí pisaba el precio real del
+    // tamaño con el viejo del campo legado, en silencio. Con varios tamaños el servidor lo rechaza.
+    if (!form.id && form.precio.trim() !== "") {
       const n = Number(form.precio);
       if (!Number.isFinite(n) || n <= 0) {
         setError("El precio debe ser un número mayor que 0. Déjalo vacío si quieres que diga \"consultar\".");
@@ -582,12 +581,17 @@ export default function CatalogoPage() {
                     ))}
                   </select>
                 </Campo>
-                {variosTamanos ? (
+                {form.id ? (
                   <Campo label="Precio (USD)" htmlFor="prod-precio">
                     <p className="rounded-xl bg-bg-subtle px-3 py-2.5 text-[13px] font-medium text-fg-muted ring-1 ring-inset ring-borde">
-                      Este producto tiene varios tamaños y{" "}
-                      <span className="font-semibold text-fg">cada uno tiene su precio</span>.
-                      Edítalos abajo, en Tamaños.
+                      {variosTamanos ? (
+                        <>Este producto tiene varios tamaños y{" "}
+                        <span className="font-semibold text-fg">cada uno tiene su precio</span>.
+                        Edítalos abajo, en Tamaños.</>
+                      ) : (
+                        <>El precio vive en el <span className="font-semibold text-fg">tamaño</span>{" "}
+                        (así el bot y el panel nunca cobran distinto). Edítalo abajo, en Tamaños.</>
+                      )}
                     </p>
                   </Campo>
                 ) : (
