@@ -78,7 +78,7 @@ export default function CatalogoPage() {
   const [subiendoMedia, setSubiendoMedia] = useState(false);
   // LOS TAMAÑOS del producto que se está editando. El precio vive AQUÍ.
   const [tamanos, setTamanos] = useState<VarianteProducto[]>([]);
-  const [nuevoTam, setNuevoTam] = useState({ presentacion: "", precio: "" });
+  const [nuevoTam, setNuevoTam] = useState({ presentacion: "", precio: "", sabores: "" });
   const [tamOcupado, setTamOcupado] = useState(false);
   const variosTamanos = tamanos.length > 1;
 
@@ -147,7 +147,7 @@ export default function CatalogoPage() {
     setForm({ ...FORM_VACIO });
     setMedia([]);
     setTamanos([]);
-    setNuevoTam({ presentacion: "", precio: "" });
+    setNuevoTam({ presentacion: "", precio: "", sabores: "" });
   }
 
   function abrirEditar(p: Producto) {
@@ -167,7 +167,7 @@ export default function CatalogoPage() {
     });
     setMedia([]);
     setTamanos(p.variantes ?? []);
-    setNuevoTam({ presentacion: "", precio: "" });
+    setNuevoTam({ presentacion: "", precio: "", sabores: "" });
     getMediaProducto(p.id)
       .then(setMedia)
       .catch(() => setMedia([]));
@@ -199,10 +199,11 @@ export default function CatalogoPage() {
       await crearVariante(form.id, {
         presentacion: pres,
         precio,
+        sabores: nuevoTam.sabores.trim() || null,
         disponible: true,
         orden: tamanos.length,
       });
-      setNuevoTam({ presentacion: "", precio: "" });
+      setNuevoTam({ presentacion: "", precio: "", sabores: "" });
       refrescarTamanos(form.id);
     } catch (e) {
       setError((e as Error).message);
@@ -694,16 +695,21 @@ export default function CatalogoPage() {
                   <div className="rounded-2xl bg-bg-subtle p-4 ring-1 ring-borde">
                     <p className="text-[12px] font-semibold text-fg">Tamaños y precios</p>
                     <p className="mt-0.5 text-[12px] font-medium text-fg-muted">
-                      Cada tamaño tiene <span className="font-semibold">su</span> precio. Si el
-                      precio cambia de un día a otro, deja el precio vacío: te lo preguntará en
-                      «El bot te necesita».
+                      Cada tamaño tiene <span className="font-semibold">su precio y sus sabores</span>.
+                      Escríbelos aquí, <span className="font-semibold">no en la descripción</span>: si
+                      el mismo dato vive en dos sitios, un día cambias uno y el bot lee el otro. Si el
+                      precio cambia de un día a otro, déjalo vacío: te lo preguntará en «El bot te
+                      necesita».
                     </p>
 
-                    <ul className="mt-3 space-y-2">
+                    <ul className="mt-3 space-y-3">
                       {tamanos.map((v) => (
-                        <li key={v.id} className="flex flex-wrap items-center gap-2">
+                        <li
+                          key={v.id}
+                          className="flex flex-wrap items-center gap-2 rounded-xl bg-bg p-2 ring-1 ring-borde/60"
+                        >
                           <input
-                            className={`${inputCls} h-9 flex-1 min-w-28`}
+                            className={`${inputCls} h-9 w-28 shrink-0`}
                             defaultValue={v.presentacion}
                             onBlur={(e) => {
                               const val = e.target.value.trim();
@@ -712,7 +718,7 @@ export default function CatalogoPage() {
                             }}
                             aria-label="Nombre del tamaño"
                           />
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex shrink-0 items-center gap-1.5">
                             <span className="text-[13px] font-medium text-fg-muted">$</span>
                             <input
                               className={`${inputCls} h-9 w-24 tnum`}
@@ -729,6 +735,21 @@ export default function CatalogoPage() {
                               aria-label="Precio del tamaño"
                             />
                           </div>
+                          {/* LOS SABORES SON DEL TAMAÑO. La kombucha de 700ml tiene cúrcuma y
+                              flor de jamaica; la de 350ml, no. Van AQUÍ y NO en la descripción:
+                              un dato, un solo lugar. Si estuvieran en los dos sitios, un día
+                              cambiaría uno y el bot leería el otro. */}
+                          <input
+                            className={`${inputCls} h-9 flex-1 min-w-40`}
+                            defaultValue={v.sabores ?? ""}
+                            placeholder="Sabores de ESTE tamaño (ej. parchita, limón, cúrcuma)"
+                            onBlur={(e) => {
+                              const val = e.target.value.trim() || null;
+                              if (val !== (v.sabores ?? null))
+                                void guardarTamano(v, { sabores: val });
+                            }}
+                            aria-label="Sabores del tamaño"
+                          />
                           <button
                             type="button"
                             disabled={tamOcupado}
@@ -779,6 +800,12 @@ export default function CatalogoPage() {
                           placeholder="del día"
                         />
                       </div>
+                      <input
+                        className={`${inputCls} h-9 flex-1 min-w-40`}
+                        value={nuevoTam.sabores}
+                        onChange={(e) => setNuevoTam({ ...nuevoTam, sabores: e.target.value })}
+                        placeholder="Sabores de ese tamaño (opcional)"
+                      />
                       <button
                         type="button"
                         disabled={tamOcupado}
