@@ -325,7 +325,7 @@ function Conversaciones() {
             </ul>
           </div>
 
-          <div className="flex min-h-[420px] flex-col rounded-2xl bg-bg p-6 shadow-card ring-hair md:col-span-2">
+          <div className="flex min-h-[420px] max-h-[calc(100dvh-13rem)] flex-col rounded-2xl bg-bg p-6 shadow-card ring-hair md:col-span-2">
             {activa ? (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="mb-4 flex items-center justify-between gap-2 border-b border-borde/60 pb-4">
