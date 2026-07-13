@@ -120,9 +120,33 @@ export interface Conversacion {
 }
 
 export interface Mensaje {
+  id?: number;
+  /** "user" = el cliente · "assistant" = el bot · "owner" = TÚ (una persona) */
   rol: string;
   contenido: string;
   fecha: string;
+  tipo?: string;
+  media_id?: string | null;
+  /** enviado | entregado | leido | fallido. null = no lo enviamos nosotros. */
+  estado?: string | null;
+  error?: string | null;
+}
+
+/** Si se le puede escribir a este cliente AHORA MISMO (la regla de las 24h de WhatsApp). */
+export interface VentanaChat {
+  abierta: boolean;
+  minutos_restantes: number;
+  cierra: string | null;
+}
+
+export interface EstadoConversacion {
+  telefono: string;
+  nombre: string | null;
+  /** true = el bot está callado y respondes TÚ */
+  bot_pausado: boolean;
+  no_leidos: number;
+  ventana: VentanaChat;
+  es_simulador: boolean;
 }
 
 export type EstadoPago = "reportado" | "confirmado" | "rechazado" | "parcial";
@@ -414,6 +438,14 @@ export const getMensajes = (telefono: string) =>
   request<Mensaje[]>(`/api/conversaciones/${telefono}`);
 export const borrarConversacion = (telefono: string) =>
   request(`/api/conversaciones/${encodeURIComponent(telefono)}`, { method: "DELETE" });
+export const getEstadoConversacion = (telefono: string) =>
+  request<EstadoConversacion>(`/api/conversaciones/${encodeURIComponent(telefono)}/estado`);
+/** TÚ le respondes al cliente por WhatsApp. El bot se calla solo en ese chat. */
+export const responderCliente = (telefono: string, texto: string) =>
+  request<{ ok: boolean; wa_message_id: string | null; bot_pausado: boolean }>(
+    `/api/conversaciones/${encodeURIComponent(telefono)}/mensajes`,
+    { method: "POST", body: JSON.stringify({ texto }) },
+  );
 
 export const getPagos = (estado?: string) =>
   request<Pago[]>(`/api/pagos${estado ? `?estado=${estado}` : ""}`);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { BellRing, Check, MessageCircle, Quote, Tag } from "lucide-react";
 import {
   getIntervenciones,
@@ -23,11 +24,11 @@ const FILTROS: { valor: EstadoIntervencion; etiqueta: string }[] = [
   { valor: "resuelta", etiqueta: "Ya atendidos" },
 ];
 
-/** Link para abrir ese chat en WhatsApp (la dueña responde desde el WhatsApp del negocio).
+/** El chat de ese cliente, DENTRO del panel: ella responde aquí, no en su celular.
  * Devuelve null si no es un teléfono real (ej. las pruebas del simulador). */
-function linkWhatsApp(telefono: string): string | null {
+function linkChat(telefono: string): string | null {
   const digitos = telefono.replace(/\D/g, "");
-  return digitos.length >= 7 ? `https://wa.me/${digitos}` : null;
+  return digitos.length >= 7 ? `/conversaciones?tel=${encodeURIComponent(telefono)}` : null;
 }
 
 /** El precio de HOY de los productos cuyo precio cambia de un día a otro
@@ -271,16 +272,14 @@ export default function BandejaPage() {
                     </p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    {linkWhatsApp(a.cliente) && (
-                      <a
-                        href={linkWhatsApp(a.cliente)!}
-                        target="_blank"
-                        rel="noreferrer"
+                    {linkChat(a.cliente) && (
+                      <Link
+                        href={linkChat(a.cliente)!}
                         className="focus-ring flex items-center gap-1.5 rounded-xl bg-bg px-3.5 py-2 text-[13px] font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle"
                       >
                         <MessageCircle className="h-4 w-4" strokeWidth={2} />
-                        Abrir el chat en WhatsApp
-                      </a>
+                        Responderle
+                      </Link>
                     )}
                     <button
                       onClick={() => resolver(a.id)}
