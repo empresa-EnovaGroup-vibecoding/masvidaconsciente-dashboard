@@ -349,6 +349,49 @@ export interface GuiasMensajes {
 
 export const getMetricas = () => request<Metricas>("/api/metricas");
 export const getReporte = () => request<Reporte>("/api/reporte");
+// ─── Roles: proveedora (Enova) vs dueña (la clienta) — migración 024 ───────────────────
+//
+// El selector de MODELO DE IA es palanca de la PROVEEDORA, no de la clienta (CLAUDE.md §5).
+// Hasta hoy no había roles y la dueña podía cambiarle el modelo al bot desde Configuración.
+//
+// ⚠️ Esconderlo aquí es COSMÉTICO. La puerta de verdad está en el backend (`proveedora_actual`):
+// quien se salte el panel y llame la API a mano se come un 403 igual.
+export type Rol = "proveedora" | "duena";
+
+export interface Yo {
+  email: string;
+  rol: Rol;
+}
+
+export interface UsuarioPanel {
+  id: number;
+  email: string;
+  nombre: string | null;
+  rol: Rol;
+  /** La cuenta principal (ADMIN_EMAIL): no se puede degradar ni borrar. Red anti-bloqueo. */
+  protegido: boolean;
+}
+
+export const getYo = () => request<Yo>("/api/yo");
+
+export const getUsuarios = () => request<UsuarioPanel[]>("/api/usuarios");
+
+export const crearUsuario = (datos: {
+  email: string;
+  password: string;
+  nombre?: string;
+  rol: Rol;
+}) => request<UsuarioPanel>("/api/usuarios", { method: "POST", body: JSON.stringify(datos) });
+
+export const cambiarRolUsuario = (id: number, rol: Rol) =>
+  request<{ ok: boolean }>(`/api/usuarios/${id}/rol`, {
+    method: "PATCH",
+    body: JSON.stringify({ rol }),
+  });
+
+export const borrarUsuario = (id: number) =>
+  request<{ ok: boolean }>(`/api/usuarios/${id}`, { method: "DELETE" });
+
 export const getConfiguracion = () => request<ConfiguracionNegocio>("/api/configuracion");
 export const guardarConfiguracion = (valores: Partial<ConfiguracionNegocio>) =>
   request("/api/configuracion", { method: "PUT", body: JSON.stringify({ valores }) });

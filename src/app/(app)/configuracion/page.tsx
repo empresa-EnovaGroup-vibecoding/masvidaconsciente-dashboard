@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useState } from "react";
-import { Check, Plus, Pencil, Trash2, X, Wallet } from "lucide-react";
+import { Check, Lock, Plus, Pencil, Trash2, X, Wallet } from "lucide-react";
 import {
   getConfiguracion,
   guardarConfiguracion,
@@ -9,8 +9,15 @@ import {
   crearMetodoPago,
   actualizarMetodoPago,
   borrarMetodoPago,
+  getYo,
+  getUsuarios,
+  crearUsuario,
+  cambiarRolUsuario,
+  borrarUsuario,
   type ConfiguracionNegocio,
   type MetodoPago,
+  type Rol,
+  type UsuarioPanel,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
 import { ErrorState } from "@/components/error-state";
@@ -118,6 +125,9 @@ function validarTelefonoDueno(crudo: string): string {
   return "";
 }
 
+/** Claves que SOLO toca la proveedora (Enova). Espejo de CLAVES_PROVEEDORA en el backend. */
+const CLAVES_PROVEEDORA: (keyof ConfiguracionNegocio)[] = ["modelo_ia"];
+
 export default function ConfiguracionPage() {
   const [datos, setDatos] = useState<ConfiguracionNegocio | null>(null);
   const [cargaFallida, setCargaFallida] = useState(false);
@@ -126,10 +136,16 @@ export default function ConfiguracionPage() {
   const [guardado, setGuardado] = useState(false);
   // true cuando la dueña eligió "Personalizado" para pegar un ID de modelo a mano.
   const [modeloCustom, setModeloCustom] = useState(false);
+  // El ROL de quien está mirando (migración 024). Mientras no se sepa, se asume lo MENOS
+  // privilegiado: así nunca se pinta por un instante algo que no le tocaba ver.
+  const [esProveedora, setEsProveedora] = useState(false);
 
   function cargar() {
     setCargaFallida(false);
     setError("");
+    getYo()
+      .then((y) => setEsProveedora(y.rol === "proveedora"))
+      .catch(() => setEsProveedora(false));
     getConfiguracion()
       .then((c) => {
         // null → "" para que los inputs sean controlados
@@ -175,12 +191,21 @@ export default function ConfiguracionPage() {
       return;
     }
     // Guardamos el WhatsApp de avisos ya normalizado (solo dígitos).
-    const datosGuardar = avisos ? { ...datos, dueno_telefono: avisos } : datos;
+    const datosGuardar: Partial<ConfiguracionNegocio> = avisos
+      ? { ...datos, dueno_telefono: avisos }
+      : { ...datos };
+    // 🔴 SIN ESTO, LA DUEÑA NO PODRÍA GUARDAR NADA. El PUT manda el objeto ENTERO, y su GET no
+    // trae `modelo_ia` (se lo esconde el backend) — así que iría con el "" del estado inicial.
+    // El backend rechaza con 403 cualquier clave de proveedora que venga de una dueña, así que
+    // el guardado entero le reventaría por una clave que ella ni siquiera ve.
+    if (!esProveedora) {
+      CLAVES_PROVEEDORA.forEach((k) => delete datosGuardar[k]);
+    }
     setGuardando(true);
     setError("");
     try {
       await guardarConfiguracion(datosGuardar);
-      setDatos(datosGuardar);
+      setDatos({ ...datos, ...datosGuardar });
       setGuardado(true);
     } catch (e) {
       setError((e as Error).message);
@@ -270,52 +295,60 @@ export default function ConfiguracionPage() {
             </Campo>
           </Seccion>
 
-          <Seccion
-            titulo="Modelo de IA (avanzado)"
-            nota="El cerebro con el que el bot conversa. Si sientes que ignora matices (tono, qué producto es cuál), prueba uno más inteligente. Elige uno de la lista o 'Personalizado' para pegar el ID exacto de cualquier modelo de openrouter.ai/models. Ojo: las notas de voz y la visión de comprobantes van siempre con Gemini — esto no las cambia."
-          >
-            <Campo label="Modelo del bot">
-              {(() => {
-                const actual = datos.modelo_ia || "google/gemini-2.5-flash";
-                const enLista = MODELOS.some((m) => m.slug === actual);
-                const mostrarCustom = modeloCustom || (!!datos.modelo_ia && !enLista);
-                return (
-                  <>
-                    <select
-                      className={inputCls}
-                      value={mostrarCustom ? "__custom__" : actual}
-                      onChange={(e) => {
-                        if (e.target.value === "__custom__") {
-                          setModeloCustom(true);
-                          set("modelo_ia", "");
-                        } else {
-                          setModeloCustom(false);
-                          set("modelo_ia", e.target.value);
-                        }
-                      }}
-                    >
-                      {MODELOS.map((m) => (
-                        <option key={m.slug} value={m.slug}>
-                          {m.label}
+          {/* SOLO LA PROVEEDORA (Enova). El modelo del bot ya estaba documentado como "palanca
+              de PROVEEDOR, no de la clienta" (CLAUDE.md §5) — pero hasta la migración 024 no
+              había roles y la dueña podía cambiárselo. Esconderlo aquí es cosmético: la puerta
+              de verdad es el 403 del backend. */}
+          {esProveedora && (
+            <Seccion
+              titulo="Modelo de IA (avanzado) · solo Enova"
+              nota="El cerebro con el que el bot conversa. Si sientes que ignora matices (tono, qué producto es cuál), prueba uno más inteligente. Elige uno de la lista o 'Personalizado' para pegar el ID exacto de cualquier modelo de openrouter.ai/models. Ojo: las notas de voz y la visión de comprobantes van siempre con Gemini — esto no las cambia."
+            >
+              <Campo label="Modelo del bot">
+                {(() => {
+                  const actual = datos.modelo_ia || "google/gemini-2.5-flash";
+                  const enLista = MODELOS.some((m) => m.slug === actual);
+                  const mostrarCustom = modeloCustom || (!!datos.modelo_ia && !enLista);
+                  return (
+                    <>
+                      <select
+                        className={inputCls}
+                        value={mostrarCustom ? "__custom__" : actual}
+                        onChange={(e) => {
+                          if (e.target.value === "__custom__") {
+                            setModeloCustom(true);
+                            set("modelo_ia", "");
+                          } else {
+                            setModeloCustom(false);
+                            set("modelo_ia", e.target.value);
+                          }
+                        }}
+                      >
+                        {MODELOS.map((m) => (
+                          <option key={m.slug} value={m.slug}>
+                            {m.label}
+                          </option>
+                        ))}
+                        <option value="__custom__">
+                          Personalizado — pegar ID de OpenRouter…
                         </option>
-                      ))}
-                      <option value="__custom__">
-                        Personalizado — pegar ID de OpenRouter…
-                      </option>
-                    </select>
-                    {mostrarCustom && (
-                      <input
-                        className={`${inputCls} mt-2`}
-                        value={datos.modelo_ia ?? ""}
-                        onChange={(e) => set("modelo_ia", e.target.value.trim())}
-                        placeholder="ej. deepseek/deepseek-v3.2"
-                      />
-                    )}
-                  </>
-                );
-              })()}
-            </Campo>
-          </Seccion>
+                      </select>
+                      {mostrarCustom && (
+                        <input
+                          className={`${inputCls} mt-2`}
+                          value={datos.modelo_ia ?? ""}
+                          onChange={(e) => set("modelo_ia", e.target.value.trim())}
+                          placeholder="ej. deepseek/deepseek-v3.2"
+                        />
+                      )}
+                    </>
+                  );
+                })()}
+              </Campo>
+            </Seccion>
+          )}
+
+          {esProveedora && <SeccionUsuarios />}
 
           <div className="flex items-center gap-3">
             <button
@@ -335,6 +368,198 @@ export default function ConfiguracionPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** USUARIOS DEL PANEL — solo la proveedora (Enova). Migración 024.
+ *
+ * Sin esta pantalla, los roles no servirían de nada: hoy hay UNA sola cuenta, compartida por
+ * Enova y la clienta, así que el rol no separaba a nadie. Aquí es donde se crea la cuenta de la
+ * DUEÑA — y a partir de ahí sí tiene sentido esconderle las palancas.
+ *
+ * La cuenta principal sale en gris y sin botones: `_crear_admin` le fuerza rol='proveedora' en
+ * CADA arranque, y la API se niega a degradarla o borrarla. Es la red anti-bloqueo: sin ella, un
+ * clic podría dejar el sistema sin nadie que pueda tocar el modelo del bot ni (desde la fase 4)
+ * sus herramientas.
+ */
+function SeccionUsuarios() {
+  const [usuarios, setUsuarios] = useState<UsuarioPanel[] | null>(null);
+  const [error, setError] = useState("");
+  const [abierto, setAbierto] = useState(false);
+  const [ocupado, setOcupado] = useState<number | "nuevo" | null>(null);
+  const [nuevo, setNuevo] = useState({ email: "", password: "", nombre: "", rol: "duena" as Rol });
+
+  const recargar = () =>
+    getUsuarios()
+      .then(setUsuarios)
+      .catch((e: Error) => setError(e.message));
+
+  useEffect(() => {
+    recargar();
+  }, []);
+
+  async function crear(e: React.FormEvent) {
+    e.preventDefault();
+    setOcupado("nuevo");
+    setError("");
+    try {
+      await crearUsuario({
+        email: nuevo.email.trim().toLowerCase(),
+        password: nuevo.password,
+        nombre: nuevo.nombre.trim() || undefined,
+        rol: nuevo.rol,
+      });
+      setNuevo({ email: "", password: "", nombre: "", rol: "duena" });
+      setAbierto(false);
+      await recargar();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  async function conmutarRol(u: UsuarioPanel) {
+    setOcupado(u.id);
+    setError("");
+    try {
+      await cambiarRolUsuario(u.id, u.rol === "proveedora" ? "duena" : "proveedora");
+      await recargar();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  async function quitar(u: UsuarioPanel) {
+    if (!window.confirm(`¿Borrar a ${u.email}? Perderá el acceso al panel.`)) return;
+    setOcupado(u.id);
+    setError("");
+    try {
+      await borrarUsuario(u.id);
+      await recargar();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  return (
+    <Seccion
+      titulo="Usuarios del panel · solo Enova"
+      nota="Quién puede entrar, y con qué permisos. La DUEÑA ve y edita su negocio (productos, precios, horarios, pagos). La PROVEEDORA además controla las palancas técnicas: el modelo de IA del bot y, próximamente, sus herramientas."
+    >
+      <ErrorBanner mensaje={error} />
+
+      <ul className="divide-y divide-borde rounded-xl ring-1 ring-borde">
+        {(usuarios ?? []).map((u) => (
+          <li key={u.id} className="flex items-center gap-3 px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-fg">{u.email}</p>
+              <p className="truncate text-[12px] font-medium text-fg-muted">
+                {u.nombre || "—"} · {u.rol === "proveedora" ? "Proveedora (Enova)" : "Dueña"}
+                {u.protegido && " · cuenta principal, no se puede cambiar"}
+              </p>
+            </div>
+            {u.protegido ? (
+              <Lock className="h-4 w-4 shrink-0 text-fg-faint" strokeWidth={1.8} />
+            ) : (
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => conmutarRol(u)}
+                  disabled={ocupado === u.id}
+                  className="focus-ring rounded-lg bg-bg px-2.5 py-1.5 text-[12px] font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
+                >
+                  {u.rol === "proveedora" ? "Pasar a Dueña" : "Pasar a Proveedora"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => quitar(u)}
+                  disabled={ocupado === u.id}
+                  aria-label={`Borrar a ${u.email}`}
+                  className="focus-ring rounded-lg bg-bg p-1.5 text-fg-muted ring-1 ring-borde transition hover:bg-bg-subtle hover:text-fg disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+                </button>
+              </div>
+            )}
+          </li>
+        ))}
+        {usuarios !== null && usuarios.length === 0 && (
+          <li className="px-3 py-3 text-sm font-medium text-fg-muted">No hay usuarios.</li>
+        )}
+      </ul>
+
+      {!abierto ? (
+        <button
+          type="button"
+          onClick={() => setAbierto(true)}
+          className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-bg px-3 py-2 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          Crear la cuenta de la dueña
+        </button>
+      ) : (
+        <form onSubmit={crear} className="space-y-3 rounded-xl bg-bg-subtle p-4 ring-1 ring-borde">
+          <Campo label="Correo">
+            <input
+              className={inputCls}
+              type="email"
+              required
+              value={nuevo.email}
+              onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })}
+              placeholder="dueña@sunegocio.com"
+            />
+          </Campo>
+          <Campo label="Contraseña (mínimo 8 caracteres)">
+            <input
+              className={inputCls}
+              type="password"
+              required
+              minLength={8}
+              value={nuevo.password}
+              onChange={(e) => setNuevo({ ...nuevo, password: e.target.value })}
+            />
+          </Campo>
+          <Campo label="Nombre (opcional)">
+            <input
+              className={inputCls}
+              value={nuevo.nombre}
+              onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })}
+            />
+          </Campo>
+          <Campo label="Rol">
+            <select
+              className={inputCls}
+              value={nuevo.rol}
+              onChange={(e) => setNuevo({ ...nuevo, rol: e.target.value as Rol })}
+            >
+              <option value="duena">Dueña — su negocio, sin las palancas técnicas</option>
+              <option value="proveedora">Proveedora (Enova) — acceso total</option>
+            </select>
+          </Campo>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={ocupado === "nuevo"}
+              className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+            >
+              {ocupado === "nuevo" ? "Creando…" : "Crear usuario"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAbierto(false); setError(""); }}
+              className="focus-ring rounded-xl bg-bg px-4 py-2 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+    </Seccion>
   );
 }
 
