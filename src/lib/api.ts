@@ -535,16 +535,27 @@ export const marcarLeido = (telefono: string) =>
  * pagos: se descarga con el token y se convierte en objectURL. Un <img src> directo NO sirve
  * (no manda el header Authorization) y el comprobante es privado: trae datos bancarios.
  */
+/** Qué es el archivo adjunto de un mensaje del hilo, para saber cómo pintarlo. */
+export type ClaseMedia = "imagen" | "video" | "archivo";
+
 export async function getMediaMensajeUrl(
   mensajeId: number,
-): Promise<{ url: string; esPdf: boolean }> {
+): Promise<{ url: string; clase: ClaseMedia }> {
   const token = getToken();
   const res = await fetch(`${API_URL}/api/mensajes/${mensajeId}/media`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("No se pudo cargar el archivo");
   const blob = await res.blob();
-  return { url: URL.createObjectURL(blob), esPdf: !blob.type.startsWith("image/") };
+  // Antes esto era `esPdf: !blob.type.startsWith("image/")`, o sea: o era imagen, o era un
+  // enlace de "comprobante". Ahora que el bot manda VIDEOS de producto, un video habría salido
+  // como un enlace gris en vez de reproducirse. Tres clases, no dos.
+  const clase: ClaseMedia = blob.type.startsWith("image/")
+    ? "imagen"
+    : blob.type.startsWith("video/")
+      ? "video"
+      : "archivo";
+  return { url: URL.createObjectURL(blob), clase };
 }
 
 export const getEstadoConversacion = (telefono: string) =>
