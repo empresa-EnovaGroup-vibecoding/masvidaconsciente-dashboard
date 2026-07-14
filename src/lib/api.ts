@@ -480,6 +480,31 @@ export const crearFeriado = (fecha: string, motivo?: string | null) =>
   request("/api/feriados", { method: "POST", body: JSON.stringify({ fecha, motivo: motivo ?? null }) });
 export const borrarFeriado = (fecha: string) =>
   request(`/api/feriados/${fecha}`, { method: "DELETE" });
+
+// ─── ENTREGAS: las zonas y su costo ─────────────────────────────────
+// 🔴 El envío es DINERO, así que NO vive en Conocimiento (un texto que el bot lee y cuenta) sino
+// aquí, en casillas con número: el CÓDIGO lo suma al total y el bot solo copia el recibo. El
+// 2026-07-13 el bot le sumó $3 de delivery "de cabeza" a una clienta real y le dijo que el total
+// en bolívares eran "$23 USD". La regla del prompt no sirvió: lo que mueve dinero va en el código.
+export type Zona = {
+  id: number;
+  nombre: string;
+  costo: number;
+  referencias: string | null;
+  es_retiro: boolean;
+  disponible: boolean;
+  orden: number;
+};
+export type ZonaIn = Omit<Zona, "id">;
+
+export const getZonas = () => request<Zona[]>("/api/zonas");
+export const crearZona = (z: ZonaIn) =>
+  request<Zona>("/api/zonas", { method: "POST", body: JSON.stringify(z) });
+export const guardarZona = (id: number, z: ZonaIn) =>
+  request<Zona>(`/api/zonas/${id}`, { method: "PUT", body: JSON.stringify(z) });
+export const borrarZona = (id: number) =>
+  request(`/api/zonas/${id}`, { method: "DELETE" });
+
 export const getCatalogoPdf = () => request<{ tiene: boolean }>("/api/catalogo-pdf");
 export async function subirCatalogoPdf(file: File): Promise<void> {
   const token = getToken();

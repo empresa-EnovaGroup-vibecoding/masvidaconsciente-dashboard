@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, BellRing, BarChart3, ShoppingBag, Wallet, Coins, CalendarDays, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut, Menu, X } from "lucide-react";
+import { LayoutGrid, BellRing, BarChart3, ShoppingBag, Wallet, Coins, CalendarDays, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut, Menu, X, Truck } from "lucide-react";
 import { clearToken, isLoggedIn, getPagos, getIntervenciones, getConfiguracion, type ConfiguracionNegocio } from "@/lib/api";
 
 const NAV = [
@@ -15,6 +15,9 @@ const NAV = [
   { href: "/tasa", label: "Tasa", icon: Coins },
   { href: "/horario", label: "Horario", icon: CalendarDays },
   { href: "/catalogo", label: "Catálogo", icon: BookOpen },
+  // El envío es DINERO: vive aquí (casillas con número que el código OBEDECE), no en
+  // Conocimiento (un texto que el bot lee y cuenta como quiere). Ver 2026-07-14.
+  { href: "/entregas", label: "Entregas", icon: Truck },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
   { href: "/bot", label: "Mi Bot", icon: Bot },
