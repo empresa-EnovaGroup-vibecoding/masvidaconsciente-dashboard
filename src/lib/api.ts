@@ -374,6 +374,33 @@ export interface UsuarioPanel {
 
 export const getYo = () => request<Yo>("/api/yo");
 
+// ─── Las HERRAMIENTAS del agente (fase 4) — solo la proveedora ─────────────────────────
+//
+// Qué sabe hacer el bot, y qué se le puede apagar. Las BLINDADAS se muestran igual (en gris,
+// con el motivo): que la proveedora vea las 12 capacidades y entienda por qué 7 no se apagan
+// vale más que un menú con huecos inexplicables.
+export interface Herramienta {
+  nombre: string;
+  etiqueta: string;
+  descripcion: string;
+  /** Qué DEJA de hacer el bot si la apagas. Se le enseña antes de confirmar. */
+  pierde: string;
+  activa: boolean;
+  /** No se puede apagar: el cobro o una red de seguridad depende de ella. */
+  blindada: boolean;
+  motivo_blindaje: string | null;
+}
+
+export const getHerramientas = () =>
+  request<{ herramientas: Herramienta[] }>("/api/herramientas");
+
+/** Se manda la lista COMPLETA de activas (idempotente). El backend revalida las blindadas. */
+export const guardarHerramientas = (activas: string[]) =>
+  request<{ ok: boolean; activas: string[] }>("/api/herramientas", {
+    method: "PUT",
+    body: JSON.stringify({ activas }),
+  });
+
 export const getUsuarios = () => request<UsuarioPanel[]>("/api/usuarios");
 
 export const crearUsuario = (datos: {

@@ -8,13 +8,129 @@ import {
   probarBot,
   getBotEstado,
   guardarBotEstado,
+  getYo,
+  getHerramientas,
+  guardarHerramientas,
+  type Herramienta,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
 import { ErrorState } from "@/components/error-state";
+import { Switch } from "@/components/switch";
 
 type MsgSim = { rol: "user" | "assistant"; texto: string };
 
+/** QUÉ SABE HACER EL BOT — solo la proveedora (Enova).
+ *
+ * Se muestran las 12 capacidades, incluidas las 7 BLINDADAS (en gris, con el motivo). Esconderlas
+ * dejaría un menú con huecos inexplicables; mostrarlas explica el sistema.
+ *
+ * Tres motivos de blindaje, y conviene no mezclarlos:
+ *   · EL COBRO — sin `generar_datos_pago` el bot daría los datos bancarios de memoria.
+ *   · LAS REDES — `pedir_ayuda` y `enviar_catalogo` las llama el CÓDIGO por su cuenta, no el
+ *     modelo. Apagarlas no le quita una capacidad al bot: le arranca el brazo a una red de
+ *     seguridad, y un bot que inventa dinero se quedaría callado sin avisar a nadie.
+ *   · EL SUELO ANTIINVENCIÓN — `ver_catalogo` e `info_producto` no son "features": son la única
+ *     fuente cerrada de verdad sobre los productos. Sin ellas, el bot empieza a inventar.
+ */
+function SeccionHerramientas() {
+  const [tools, setTools] = useState<Herramienta[] | null>(null);
+  const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState<string | null>(null);
+  const [guardado, setGuardado] = useState(false);
+
+  useEffect(() => {
+    getHerramientas()
+      .then((r) => setTools(r.herramientas))
+      .catch((e: Error) => setError(e.message));
+  }, []);
+
+  async function conmutar(t: Herramienta) {
+    if (!tools || t.blindada) return;
+    if (t.activa && !window.confirm(`¿Apagar "${t.etiqueta}"?\n\n${t.pierde}`)) return;
+    const nuevas = tools.map((x) => (x.nombre === t.nombre ? { ...x, activa: !x.activa } : x));
+    setTools(nuevas);           // optimista
+    setGuardando(t.nombre);
+    setError("");
+    setGuardado(false);
+    try {
+      // Se manda la lista COMPLETA (idempotente). El backend revalida las blindadas.
+      await guardarHerramientas(nuevas.filter((x) => x.activa).map((x) => x.nombre));
+      setGuardado(true);
+    } catch (e) {
+      setError((e as Error).message);
+      setTools(tools);          // se deshace el optimismo
+    } finally {
+      setGuardando(null);
+    }
+  }
+
+  const activas = (tools ?? []).filter((t) => t.activa).length;
+
+  return (
+    <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold num-snug text-fg">
+            Qué sabe hacer el bot · solo Enova
+          </h2>
+          <p className="mt-1 mb-4 max-w-2xl text-sm font-medium leading-relaxed text-fg-muted">
+            Enciende y apaga capacidades sin desplegar. Cuando apagas una, el bot deja de verla{" "}
+            <strong>y el prompt deja de ordenársela</strong> — en su lugar se le explica el límite
+            y se le dice que te llame a ti. Las que están en gris no se pueden apagar: el cobro y
+            las redes de seguridad dependen de ellas.
+          </p>
+        </div>
+        {guardado && !guardando && (
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-accent">
+            <Check className="h-4 w-4" strokeWidth={2} />
+            Guardado
+          </span>
+        )}
+      </div>
+
+      <ErrorBanner mensaje={error} className="mb-3" />
+
+      <ul className="divide-y divide-borde rounded-xl ring-1 ring-borde">
+        {(tools ?? []).map((t) => (
+          <li key={t.nombre} className="flex items-center gap-3 px-3 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+                {t.etiqueta}
+                {t.blindada && (
+                  <Lock className="h-3.5 w-3.5 shrink-0 text-fg-faint" strokeWidth={2} />
+                )}
+              </p>
+              <p className="mt-0.5 text-[12px] font-medium leading-relaxed text-fg-muted">
+                {t.blindada ? t.motivo_blindaje : t.descripcion}
+              </p>
+            </div>
+            <Switch
+              activo={t.activa}
+              onChange={() => conmutar(t)}
+              disabled={guardando === t.nombre}
+              bloqueado={t.blindada}
+              label={`${t.activa ? "Apagar" : "Encender"} ${t.etiqueta}`}
+              titulo={t.blindada ? "No se puede apagar: " + (t.motivo_blindaje ?? "") : undefined}
+            />
+          </li>
+        ))}
+        {tools === null && (
+          <li className="px-3 py-4 text-sm font-medium text-fg-muted">Cargando…</li>
+        )}
+      </ul>
+
+      {tools && (
+        <p className="mt-3 text-[12px] font-medium text-fg-muted">
+          {activas} de {tools.length} capacidades activas. Pruébalo abajo, en el simulador.
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function BotPage() {
+  // El ROL de quien mira (migración 024). Se asume lo MENOS privilegiado hasta saberlo.
+  const [esProveedora, setEsProveedora] = useState(false);
   // ── Personalidad ──
   const [texto, setTexto] = useState<string | null>(null);
   const [original, setOriginal] = useState("");
@@ -47,6 +163,11 @@ export default function BotPage() {
     getBotEstado()
       .then((e) => setBotActivo(e.activo))
       .catch(() => {});
+    // El rol decide si se pinta la sección de HERRAMIENTAS. Ante la duda, NO se pinta: esconder
+    // de más solo le quita una pantalla a la proveedora; enseñar de más se la da a la clienta.
+    getYo()
+      .then((y) => setEsProveedora(y.rol === "proveedora"))
+      .catch(() => setEsProveedora(false));
   }
 
   useEffect(() => {
@@ -155,6 +276,11 @@ export default function BotPage() {
           </button>
         )}
       </div>
+
+      {/* ── QUÉ SABE HACER (fase 4) — solo la proveedora. Va aquí, entre el interruptor y el
+             simulador, porque es el mismo concepto con más grano ("qué sabe hacer") y porque el
+             simulador está AL LADO: apagas una capacidad y la pruebas en la misma pantalla. ── */}
+      {esProveedora && <SeccionHerramientas />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* ── Personalidad ── */}
