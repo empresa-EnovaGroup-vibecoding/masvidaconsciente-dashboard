@@ -225,6 +225,10 @@ export interface ConfiguracionNegocio {
   hora_corte: string | null;
   // Modelo de IA con el que el bot conversa. Lo elige la proveedora.
   modelo_ia: string | null;
+  /** Fase 5: "uno" (agente único) | "dos" (Operador + Voz). Palanca de la PROVEEDORA. */
+  agente_modo: string | null;
+  modelo_operador: string | null;
+  modelo_voz: string | null;
 }
 
 /** Un día suelto en que el negocio NO entrega (viaje, feriado, vacaciones). */

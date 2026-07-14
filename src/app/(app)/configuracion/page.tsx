@@ -38,6 +38,9 @@ const VACIO: ConfiguracionNegocio = {
   hora_cierre: "",
   hora_corte: "",
   modelo_ia: "",
+  agente_modo: "",
+  modelo_operador: "",
+  modelo_voz: "",
 };
 
 // Modelos que puede usar el bot para conversar. El slug es el identificador de
@@ -126,7 +129,12 @@ function validarTelefonoDueno(crudo: string): string {
 }
 
 /** Claves que SOLO toca la proveedora (Enova). Espejo de CLAVES_PROVEEDORA en el backend. */
-const CLAVES_PROVEEDORA: (keyof ConfiguracionNegocio)[] = ["modelo_ia"];
+const CLAVES_PROVEEDORA: (keyof ConfiguracionNegocio)[] = [
+  "modelo_ia",
+  "agente_modo",
+  "modelo_operador",
+  "modelo_voz",
+];
 
 export default function ConfiguracionPage() {
   const [datos, setDatos] = useState<ConfiguracionNegocio | null>(null);
@@ -345,6 +353,60 @@ export default function ConfiguracionPage() {
                   );
                 })()}
               </Campo>
+            </Seccion>
+          )}
+
+          {/* ── LOS DOS AGENTES (fase 5) — solo Enova ── */}
+          {esProveedora && (
+            <Seccion
+              titulo="Arquitectura del agente (avanzado) · solo Enova"
+              nota="Con UN agente, el mismo modelo tiene que llamar herramientas, cobrar y sonar humano a la vez — con 16.000 tokens de instrucciones y 42 reglas encima. Con DOS, el Operador hace (busca, registra, cobra) y la Voz habla. La Voz no ve el catálogo ni los datos bancarios: no es que se le prohíba inventar, es que no tiene de dónde. Se puede volver al modo de siempre cuando quieras — el bot lo obedece en el siguiente mensaje."
+            >
+              <Campo label="Modo">
+                <select
+                  className={inputCls}
+                  value={datos.agente_modo || "uno"}
+                  onChange={(e) => set("agente_modo", e.target.value)}
+                >
+                  <option value="uno">Un agente — el de siempre (por defecto)</option>
+                  <option value="dos">Dos agentes — Operador + Voz</option>
+                </select>
+              </Campo>
+              {(datos.agente_modo || "uno") === "dos" && (
+                <>
+                  <Campo label="Modelo del OPERADOR (el que busca, registra y cobra)">
+                    <select
+                      className={inputCls}
+                      value={datos.modelo_operador || ""}
+                      onChange={(e) => set("modelo_operador", e.target.value)}
+                    >
+                      <option value="">El mismo que el modelo del bot</option>
+                      {MODELOS.map((m) => (
+                        <option key={m.slug} value={m.slug}>{m.label}</option>
+                      ))}
+                    </select>
+                  </Campo>
+                  <Campo label="Modelo de la VOZ (el que le escribe al cliente)">
+                    <select
+                      className={inputCls}
+                      value={datos.modelo_voz || ""}
+                      onChange={(e) => set("modelo_voz", e.target.value)}
+                    >
+                      <option value="">El mismo que el modelo del bot</option>
+                      {MODELOS.map((m) => (
+                        <option key={m.slug} value={m.slug}>{m.label}</option>
+                      ))}
+                    </select>
+                  </Campo>
+                  <p className="text-[12px] font-medium leading-relaxed text-fg-muted">
+                    Aquí está la ganancia real: la Voz carga <strong>un tercio</strong> de las
+                    instrucciones (no tiene herramientas ni catálogo), así que puedes darle un
+                    modelo más fino sin que se dispare el costo — y dejarle al Operador uno más
+                    barato, que solo tiene que elegir bien la herramienta. Pruébalo en el
+                    simulador de <strong>Mi Bot</strong> antes de dejarlo puesto.
+                  </p>
+                </>
+              )}
             </Seccion>
           )}
 
