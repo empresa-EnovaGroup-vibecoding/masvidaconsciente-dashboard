@@ -4,6 +4,7 @@ import React, { useEffect, useId, useState } from "react";
 import { Check, Lock, Plus, Pencil, Trash2, X, Wallet } from "lucide-react";
 import {
   getConfiguracion,
+  getModelosOpenRouter,
   guardarConfiguracion,
   getMetodosPago,
   crearMetodoPago,
@@ -53,6 +54,20 @@ const MODELOS = [
   { slug: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6 — el más fino para vender (~$16 / 1.000)" },
   { slug: "openai/gpt-4.1", label: "GPT-4.1 (OpenAI) — equilibrado (~$10 / 1.000)" },
 ];
+
+// Nombre bonito de cada proveedor de OpenRouter (el prefijo del id: 'anthropic/…'). Los que no
+// estén acá se muestran con su prefijo tal cual.
+const NOMBRE_PROV: Record<string, string> = {
+  anthropic: "Anthropic (Claude)",
+  google: "Google (Gemini)",
+  openai: "OpenAI (GPT)",
+  "x-ai": "xAI (Grok)",
+  deepseek: "DeepSeek",
+  "meta-llama": "Meta (Llama)",
+  mistralai: "Mistral",
+  "qwen": "Qwen",
+};
+const nombreProv = (p: string) => NOMBRE_PROV[p] || p;
 
 // Tipos de método de pago que el bot ofrece y con los que reconoce los cobros.
 const TIPOS_METODO = [
@@ -143,7 +158,10 @@ export default function ConfiguracionPage() {
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
   // true cuando la dueña eligió "Personalizado" para pegar un ID de modelo a mano.
-  const [modeloCustom, setModeloCustom] = useState(false);
+  // Modelos de OpenRouter para el selector (proveedor arriba, modelo abajo).
+  const [modelos, setModelos] = useState<{ id: string; name: string }[]>([]);
+  const [provSel, setProvSel] = useState("");
+  const [buscaModelo, setBuscaModelo] = useState("");
   // El ROL de quien está mirando (migración 024). Mientras no se sepa, se asume lo MENOS
   // privilegiado: así nunca se pinta por un instante algo que no le tocaba ver.
   const [esProveedora, setEsProveedora] = useState(false);
@@ -172,6 +190,20 @@ export default function ConfiguracionPage() {
   useEffect(() => {
     cargar();
   }, []);
+
+  // Trae los modelos de OpenRouter (solo la proveedora ve este selector).
+  useEffect(() => {
+    if (!esProveedora) return;
+    getModelosOpenRouter()
+      .then((r) => setModelos(r.modelos ?? []))
+      .catch(() => setModelos([]));
+  }, [esProveedora]);
+
+  // Al cargar, deja el selector de proveedor en el del modelo que ya está guardado.
+  useEffect(() => {
+    const actual = datos?.modelo_ia ?? "";
+    if (actual.includes("/") && !provSel) setProvSel(actual.split("/")[0]);
+  }, [datos?.modelo_ia, provSel]);
 
   function set(campo: keyof ConfiguracionNegocio, valor: string) {
     if (!datos) return;
@@ -310,49 +342,84 @@ export default function ConfiguracionPage() {
           {esProveedora && (
             <Seccion
               titulo="Modelo de IA (avanzado) · solo Enova"
-              nota="El cerebro con el que el bot conversa. Si sientes que ignora matices (tono, qué producto es cuál), prueba uno más inteligente. Elige uno de la lista o 'Personalizado' para pegar el ID exacto de cualquier modelo de openrouter.ai/models. Ojo: las notas de voz y la visión de comprobantes van siempre con Gemini — esto no las cambia."
+              nota="El cerebro con el que el bot conversa. Arriba eliges el PROVEEDOR (Anthropic/Claude, Google/Gemini, OpenAI/GPT, xAI/Grok…) y abajo el modelo — o lo buscas por nombre. Todos vienen de openrouter.ai/models. 'Personalizado' te deja pegar cualquier ID a mano. Ojo: las notas de voz y la visión de comprobantes van siempre con Gemini — esto no las cambia."
             >
-              <Campo label="Modelo del bot">
-                {(() => {
-                  const actual = datos.modelo_ia || "google/gemini-2.5-flash";
-                  const enLista = MODELOS.some((m) => m.slug === actual);
-                  const mostrarCustom = modeloCustom || (!!datos.modelo_ia && !enLista);
-                  return (
-                    <>
+              {(() => {
+                const custom = provSel === "__custom__";
+                const provs = Array.from(
+                  new Set(modelos.map((m) => m.id.split("/")[0])),
+                ).sort();
+                const filtrados = modelos.filter(
+                  (m) =>
+                    m.id.startsWith(provSel + "/") &&
+                    (buscaModelo === "" ||
+                      m.id.toLowerCase().includes(buscaModelo.toLowerCase()) ||
+                      m.name.toLowerCase().includes(buscaModelo.toLowerCase())),
+                );
+                const actualEnLista =
+                  !!datos.modelo_ia && filtrados.some((m) => m.id === datos.modelo_ia);
+                return (
+                  <>
+                    <Campo label="Proveedor">
                       <select
                         className={inputCls}
-                        value={mostrarCustom ? "__custom__" : actual}
+                        value={custom ? "__custom__" : provSel}
                         onChange={(e) => {
-                          if (e.target.value === "__custom__") {
-                            setModeloCustom(true);
-                            set("modelo_ia", "");
-                          } else {
-                            setModeloCustom(false);
-                            set("modelo_ia", e.target.value);
-                          }
+                          setProvSel(e.target.value);
+                          setBuscaModelo("");
                         }}
                       >
-                        {MODELOS.map((m) => (
-                          <option key={m.slug} value={m.slug}>
-                            {m.label}
+                        {provs.length === 0 && <option value="">Cargando modelos…</option>}
+                        {provs.map((p) => (
+                          <option key={p} value={p}>
+                            {nombreProv(p)}
                           </option>
                         ))}
-                        <option value="__custom__">
-                          Personalizado — pegar ID de OpenRouter…
-                        </option>
+                        <option value="__custom__">Personalizado — pegar el ID a mano</option>
                       </select>
-                      {mostrarCustom && (
+                    </Campo>
+                    {custom ? (
+                      <input
+                        className={`${inputCls} mt-2`}
+                        value={datos.modelo_ia ?? ""}
+                        onChange={(e) => set("modelo_ia", e.target.value.trim())}
+                        placeholder="ej. deepseek/deepseek-v3.2"
+                      />
+                    ) : (
+                      <div className="mt-3">
                         <input
-                          className={`${inputCls} mt-2`}
-                          value={datos.modelo_ia ?? ""}
-                          onChange={(e) => set("modelo_ia", e.target.value.trim())}
-                          placeholder="ej. deepseek/deepseek-v3.2"
+                          className={inputCls}
+                          value={buscaModelo}
+                          onChange={(e) => setBuscaModelo(e.target.value)}
+                          placeholder={`Buscar entre ${filtrados.length} modelos de ${nombreProv(provSel) || "…"}…`}
                         />
-                      )}
-                    </>
-                  );
-                })()}
-              </Campo>
+                        <div className="mt-2">
+                          <Campo label="Modelo">
+                            <select
+                              className={inputCls}
+                              value={datos.modelo_ia ?? ""}
+                              onChange={(e) => set("modelo_ia", e.target.value)}
+                            >
+                              {!actualEnLista && (
+                                <option value={datos.modelo_ia ?? ""}>
+                                  {datos.modelo_ia
+                                    ? `${datos.modelo_ia} (actual)`
+                                    : "Elige un modelo…"}
+                                </option>
+                              )}
+                              {filtrados.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name} — {m.id}
+                                </option>
+                              ))}
+                            </select>
+                          </Campo>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </Seccion>
           )}
 

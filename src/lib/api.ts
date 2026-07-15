@@ -424,6 +424,9 @@ export const borrarUsuario = (id: number) =>
   request<{ ok: boolean }>(`/api/usuarios/${id}`, { method: "DELETE" });
 
 export const getConfiguracion = () => request<ConfiguracionNegocio>("/api/configuracion");
+
+export const getModelosOpenRouter = () =>
+  request<{ modelos: { id: string; name: string }[] }>("/api/modelos-openrouter");
 export const guardarConfiguracion = (valores: Partial<ConfiguracionNegocio>) =>
   request("/api/configuracion", { method: "PUT", body: JSON.stringify({ valores }) });
 export const getMetodosPago = () => request<MetodoPago[]>("/api/metodos-pago");
