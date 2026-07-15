@@ -224,7 +224,7 @@ function Conversaciones() {
     if (!activa) return;
     if (
       !window.confirm(
-        "¿Borrar este chat? Se eliminan los mensajes y la memoria del bot para este cliente. Sus pedidos y pagos NO se borran. Esto no se puede deshacer.",
+        "¿Borrar este chat? Se eliminan los mensajes, los avisos de la bandeja y la memoria del bot (incluida la caché del cobro en curso) para este cliente. Sus pedidos y pagos NO se borran. Esto no se puede deshacer.",
       )
     )
       return;
