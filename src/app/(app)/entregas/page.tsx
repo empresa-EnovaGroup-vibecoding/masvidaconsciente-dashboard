@@ -191,7 +191,7 @@ export default function EntregasPage() {
                 <button
                   onClick={() => void guardar(z)}
                   disabled={guardando === z.id}
-                  className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-marca px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="focus-ring inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-fg-muted ring-1 ring-borde transition hover:bg-bg-subtle hover:text-fg disabled:opacity-50"
                 >
                   <Save className="h-4 w-4" />
                   {guardando === z.id ? "Guardando…" : "Guardar"}
@@ -285,7 +285,7 @@ export default function EntregasPage() {
           <button
             onClick={() => void agregar()}
             disabled={!nueva.nombre.trim() || guardando === "nueva"}
-            className="focus-ring ml-auto inline-flex items-center gap-1.5 rounded-xl bg-marca px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="focus-ring ml-auto inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-fg-muted ring-1 ring-borde transition hover:bg-bg-subtle hover:text-fg disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             {guardando === "nueva" ? "Agregando…" : "Agregar"}
