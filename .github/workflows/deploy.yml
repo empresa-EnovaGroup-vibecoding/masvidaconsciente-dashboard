@@ -1,38 +1,47 @@
-name: Desplegar el panel (taller en cada push · producción a mano)
+name: Panel — desplegar SOLO a mano
 
-# ANTES: cada push a master reconstruía el panel en LOS DOS servidores a la vez, así que
-# no se podía probar en el taller sin tocar producción. (Deuda A1 de la auditoría 2026-07-13.)
+# 🔴 NINGÚN PUSH DESPLIEGA NADA. Decisión del 2026-08-02 (misma que en el repo del bot).
 #
-# AHORA:
-#   • Un push a master  ->  despliega SOLO el TALLER (Hostinger viejo, el número de pruebas).
-#   • Producción (netcup, clientes reales)  ->  SOLO a mano: se lanza este flujo desde la
-#     pestaña "Actions" con la casilla "produccion" marcada (o con `gh workflow run deploy.yml
-#     -f produccion=true`). Así producción NUNCA se toca sin que un humano lo decida.
+# ANTES: un push a master reconstruía el panel del taller solo. Se quitó por dos razones que se
+# pagaron de verdad: (1) se perdía la certeza de qué versión está viva —el 23-jul un despliegue
+# automático recreó los contenedores del taller sin que nadie se enterara—, y (2) publicar en
+# GitHub y tocar un sistema con clientes eran el mismo acto, así que no se podía respaldar el
+# trabajo sin desplegarlo.
+#
+# AHORA: `git push` solo publica (respaldo y trazabilidad). Para desplegar hay que venir a la
+# pestaña "Actions" -> "Run workflow" y elegir el destino a mano
+# (o `gh workflow run deploy.yml -f destino=taller`).
+#
+# ⚠️ El panel NO tiene puerta de verificación automática (ni `tsc` ni `build` en CI). Antes de
+# desplegarlo, compilarlo a mano con Docker — y acordarse de `NEXT_PUBLIC_API_URL`, que es
+# build-time: sin ella el bundle cae a localhost:8000 y TODO el panel da "Failed to fetch".
 #
 # Los tokens viven en los "Secrets" del repositorio (Settings -> Secrets and variables -> Actions).
 
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
     inputs:
-      produccion:
-        description: 'Marca esta casilla para desplegar TAMBIÉN a producción (netcup, clientes reales). Sin marcar = solo el taller.'
-        type: boolean
-        default: false
+      destino:
+        description: '¿Dónde desplegar? "taller" = pruebas. "produccion" = CLIENTES REALES.'
+        type: choice
+        options:
+          - taller
+          - produccion
+        default: taller
 
 jobs:
   desplegar:
     runs-on: ubuntu-latest
     steps:
-      - name: TALLER (siempre — Hostinger viejo, tu número de pruebas)
+      - name: TALLER (Hostinger viejo, tu número de pruebas)
+        if: ${{ inputs.destino == 'taller' }}
         run: |
           curl -fsS --connect-timeout 20 --max-time 120 --retry 3 --retry-all-errors --retry-delay 5 \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_OLD_TOKEN }}" \
             "http://2.25.139.106:8000/api/v1/deploy?uuid=jvlqemh8s225qjftsev7ss8n"
 
-      - name: PRODUCCIÓN (solo a mano y con la casilla marcada — netcup, clientes reales)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.produccion }}
+      - name: PRODUCCIÓN (netcup, CLIENTES REALES)
+        if: ${{ inputs.destino == 'produccion' }}
         run: |
           curl -fsS --connect-timeout 20 --max-time 120 --retry 3 --retry-all-errors --retry-delay 5 \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_NEW_TOKEN }}" \
