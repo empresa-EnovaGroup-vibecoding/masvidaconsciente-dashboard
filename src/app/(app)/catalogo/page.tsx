@@ -37,6 +37,25 @@ const TITULO: Record<string, string> = {
   harinas: "Harinas",
 };
 
+/**
+ * Lo que se PINTA como precio en la tarjeta del catálogo.
+ *
+ * 🔴 Si el producto ya tiene tamaños, el precio vive AHÍ y solo ahí (api.ts:167). El campo
+ * `precio` del producto es el LEGADO de antes de la migración a variantes: un número viejo que
+ * el bot ya no cobra. La cadena de ternarios que había aquí se caía hasta él cuando el producto
+ * tenía UN tamaño con el precio vacío, y la tarjeta enseñaba "$6" mientras el bot, para ese
+ * mismo tamaño, abría una intervención de "precio del día" y preguntaba cuánto vale hoy.
+ * Un tamaño sin precio es "precio del día" y se dice así: enseñar un precio que ya nadie cobra
+ * es peor que no enseñar ninguno.
+ */
+function precioTarjeta(p: Producto): string {
+  const tam = p.variantes ?? [];
+  if (tam.length > 1) return `${tam.length} tamaños`;
+  if (tam.length === 1) return tam[0].precio != null ? formatUSD(tam[0].precio) : "precio del día";
+  // Sin ningún tamaño = producto legado sin migrar: ahí sí manda `p.precio`.
+  return p.precio !== null ? formatUSD(p.precio) : "precio del día";
+}
+
 type FormState = {
   id?: number;
   nombre: string;
@@ -462,13 +481,7 @@ export default function CatalogoPage() {
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="font-bold text-fg">{p.nombre}</p>
                       <span className="shrink-0 text-sm font-bold text-accent num-snug tnum">
-                        {(p.variantes?.length ?? 0) > 1
-                          ? `${p.variantes!.length} tamaños`
-                          : p.variantes?.[0]?.precio != null
-                            ? formatUSD(p.variantes[0].precio!)
-                            : p.precio !== null
-                              ? formatUSD(p.precio)
-                              : "precio del día"}
+                        {precioTarjeta(p)}
                       </span>
                     </div>
                     {(p.variantes?.length ?? 0) > 1 ? (

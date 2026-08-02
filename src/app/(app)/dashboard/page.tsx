@@ -59,6 +59,8 @@ interface Kpi {
   accent?: boolean;
   href?: string;
   cta?: string;
+  /** true = su endpoint falló: se pinta un guion y un «Reintentar», nunca un esqueleto eterno. */
+  fallido?: boolean;
 }
 
 export default function DashboardPage() {
@@ -69,15 +71,27 @@ export default function DashboardPage() {
   const [botActivo, setBotActivo] = useState<boolean | null>(null);
   const [pagosPend, setPagosPend] = useState<number | null>(null);
   const [error, setError] = useState("");
+  // 🔴 Qué tarjeta NO pudo cargar. Sin esto, el `.catch(() => {})` dejaba el estado en `null` —
+  // que es EL MISMO valor que significa "cargando" — y el esqueleto giraba para siempre: la
+  // dueña esperaba algo que ya había fallado, sin ningún botón para reintentar.
+  const [fallo, setFallo] = useState({ tasa: false, reporte: false, pedidos: false, pagos: false });
 
   function cargar() {
     setError("");
+    setFallo({ tasa: false, reporte: false, pedidos: false, pagos: false });
     getMetricas().then(setM).catch((e) => setError(e.message));
-    getTasa().then(setTasa).catch(() => {});
-    getReporte().then(setReporte).catch(() => {});
-    getPedidos().then(setPedidos).catch(() => {});
-    getBotEstado().then((b) => setBotActivo(b.activo)).catch(() => {});
-    getPagos("reportado").then((p) => setPagosPend(p.length)).catch(() => setPagosPend(0));
+    getTasa().then(setTasa).catch(() => setFallo((f) => ({ ...f, tasa: true })));
+    getReporte().then(setReporte).catch(() => setFallo((f) => ({ ...f, reporte: true })));
+    getPedidos().then(setPedidos).catch(() => setFallo((f) => ({ ...f, pedidos: true })));
+    // Este SÍ puede callar: con `null` la píldora dice «Estado desconocido», que es la verdad.
+    getBotEstado().then((b) => setBotActivo(b.activo)).catch(() => setBotActivo(null));
+    // 🔴 Antes: `.catch(() => setPagosPend(0))` — pintaba un 0 grande en «Pagos por verificar»
+    // cuando el endpoint FALLÓ. Le afirmaba a la dueña "no tienes nada que revisar" sin saberlo,
+    // y así se pierde un cobro. Es dinero: si no se sabe, no se inventa un cero tranquilizador
+    // (la regla del cobro que ya declara el comentario del array `kpis`, más abajo).
+    getPagos("reportado")
+      .then((p) => setPagosPend(p.length))
+      .catch(() => setFallo((f) => ({ ...f, pagos: true })));
   }
 
   useEffect(() => {
@@ -90,9 +104,13 @@ export default function DashboardPage() {
 
   // KPIs: SOLO números reales del API (nunca inventados — regla del cobro).
   const kpis: Kpi[] = [
-    { label: "Cobrado este mes", valor: reporte ? formatUSD(reporte.mes.ventas_usd) : null, sub: "pagos confirmados", icon: DollarSign },
+    // 🔴 NO es el mes calendario: el backend lo calcula como `ahora - 30 días` (router.py:333),
+    // una ventana móvil. El día 2 de agosto, "Cobrado este mes" incluía casi todo julio — y es
+    // el número más grande del panel, el que la dueña usa para cuadrar caja. El nombre dice
+    // ahora exactamente lo que el número es (la pantalla Reporte ya lo decía: "Últimos 30 días").
+    { label: "Cobrado · últimos 30 días", valor: reporte ? formatUSD(reporte.mes.ventas_usd) : null, sub: "pagos confirmados · no es el mes calendario", icon: DollarSign, fallido: fallo.reporte },
     { label: "Pedidos hoy", valor: m ? String(m.pedidos_hoy) : null, sub: "hoy", icon: ShoppingBag },
-    { label: "Pagos por verificar", valor: pagosPend === null ? null : String(pagosPend), sub: "por revisar", icon: Clock, accent: true, href: "/pagos", cta: "Revisar" },
+    { label: "Pagos por verificar", valor: pagosPend === null ? null : String(pagosPend), sub: "por revisar", icon: Clock, accent: true, href: "/pagos", cta: "Revisar", fallido: fallo.pagos },
     { label: "Clientes", valor: m ? String(m.clientes_total) : null, sub: "en total", icon: Users },
   ];
 
@@ -138,7 +156,7 @@ export default function DashboardPage() {
 
           {/* ── Tarjetas KPI ───────────────────────────────────────── */}
           <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            {kpis.map(({ label, valor, sub, icon: Icon, accent, href, cta }) => (
+            {kpis.map(({ label, valor, sub, icon: Icon, accent, href, cta, fallido }) => (
               <div
                 key={label}
                 className="card relative overflow-hidden rounded-2xl bg-bg p-6 shadow-card ring-hair"
@@ -155,11 +173,21 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 {valor === null ? (
-                  <Skel className="mt-3 h-9 w-24" />
+                  // Un guion dice "no lo sé"; el esqueleto dice "ya casi". Cuando el endpoint
+                  // falló, seguir animando es mentir sobre una carga que nunca va a terminar.
+                  fallido ? (
+                    <p className="mt-3 text-4xl font-extrabold num-tight text-fg-faint tnum">—</p>
+                  ) : (
+                    <Skel className="mt-3 h-9 w-24" />
+                  )
                 ) : (
                   <p className="mt-3 text-4xl font-extrabold num-tight text-fg tnum">{valor}</p>
                 )}
-                {href ? (
+                {fallido ? (
+                  <button onClick={cargar} className="lnk mt-1.5 text-xs font-bold text-accent hover:underline">
+                    No se pudo cargar · Reintentar
+                  </button>
+                ) : href ? (
                   <Link href={href} className="lnk mt-1.5 text-xs font-bold text-accent hover:underline">
                     {cta} <ArrowRight className="h-3.5 w-3.5" strokeWidth={2.2} />
                   </Link>
@@ -176,23 +204,39 @@ export default function DashboardPage() {
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-fg-muted">Tasa de cambio (BCV)</p>
                 {tasa === null ? (
-                  <Skel className="mt-2 h-10 w-52" />
+                  fallo.tasa ? (
+                    <p className="mt-1 text-4xl font-extrabold num-tight text-fg-faint tnum">—</p>
+                  ) : (
+                    <Skel className="mt-2 h-10 w-52" />
+                  )
                 ) : (
                   <p className="mt-1 text-4xl font-extrabold num-tight text-fg tnum">
                     {formatBs(tasa.tasa_efectiva)} <span className="text-2xl font-bold text-fg-faint">/ $</span>
                   </p>
                 )}
-                <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-fg-muted">
-                  {tasa?.manual_activa ? (
-                    <>
-                      <Lock className="h-3.5 w-3.5" strokeWidth={2} /> Manual · candado activo
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} /> Automática · se aplica al cobro
-                    </>
-                  )}
-                </p>
+                {/* Manual/Automática solo se dice cuando se SABE: `tasa?.manual_activa` con la
+                    tasa en null daba undefined, caía al else y el panel afirmaba «Automática ·
+                    se aplica al cobro» sin haber podido leer nada. Es el modo con el que se
+                    cobra: no se declara de memoria. */}
+                {tasa === null ? (
+                  fallo.tasa && (
+                    <button onClick={cargar} className="lnk mt-1.5 text-sm font-semibold text-accent hover:underline">
+                      No se pudo cargar la tasa · Reintentar
+                    </button>
+                  )
+                ) : (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-fg-muted">
+                    {tasa.manual_activa ? (
+                      <>
+                        <Lock className="h-3.5 w-3.5" strokeWidth={2} /> Manual · candado activo
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5" strokeWidth={2} /> Automática · se aplica al cobro
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-5">
                 <Link href="/tasa" className="lnk text-sm font-semibold text-accent hover:underline">
@@ -218,13 +262,23 @@ export default function DashboardPage() {
             </div>
 
             {ultimos === null ? (
-              <div>
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="border-t border-borde/60 px-6 py-4">
-                    <Skel className="h-6 w-full" />
-                  </div>
-                ))}
-              </div>
+              fallo.pedidos ? (
+                <div className="border-t border-borde/60">
+                  <ErrorState
+                    mensaje="No se pudieron cargar los últimos pedidos."
+                    onRetry={cargar}
+                    embedded
+                  />
+                </div>
+              ) : (
+                <div>
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="border-t border-borde/60 px-6 py-4">
+                      <Skel className="h-6 w-full" />
+                    </div>
+                  ))}
+                </div>
+              )
             ) : ultimos.length === 0 ? (
               <EmptyState
                 icon={ShoppingBag}

@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * ENTREGAS — dónde entregas y cuánto cobras por llevarlo.
+ * ZONAS DE ENVÍO — dónde entregas y cuánto cobras por llevarlo.
+ * (La carpeta se sigue llamando `entregas/` y la URL también: solo cambió el nombre visible.)
  *
  * 🔴 POR QUÉ ESTA PANTALLA EXISTE (caso real, 2026-07-13): una clienta quería un producto de $20
  * con delivery y el bot le escribió *"El total en bolívares es de $23 USD"* — sumó los $3 del
@@ -112,7 +113,9 @@ export default function EntregasPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-2">
-        <h1 className="text-3xl font-bold text-fg">Entregas</h1>
+        {/* El título dice "Zonas de envío" igual que el menú (layout.tsx): decir "Entregas"
+            prometía las entregas del día —que están en Pedidos— y entregaba tarifas. */}
+        <h1 className="text-3xl font-bold text-fg">Zonas de envío</h1>
         <p className="mt-1 text-sm text-fg-muted">
           Dónde entregas y cuánto cobras por llevarlo. El bot <strong>no inventa</strong> el envío:
           lo escoge de esta lista y el sistema lo <strong>suma solo</strong> al total.

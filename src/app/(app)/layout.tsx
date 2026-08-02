@@ -17,7 +17,13 @@ const NAV = [
   { href: "/catalogo", label: "Catálogo", icon: BookOpen },
   // El envío es DINERO: vive aquí (casillas con número que el código OBEDECE), no en
   // Conocimiento (un texto que el bot lee y cuenta como quiere). Ver 2026-07-14.
-  { href: "/entregas", label: "Entregas", icon: Truck },
+  // ⚠️ Se llama "Zonas de envío", NO "Entregas": aquí no hay ninguna entrega del día. La dueña
+  // que buscaba "qué tengo que entregar hoy" hacía clic en el camión y se encontraba una tabla
+  // de tarifas de delivery; lo que buscaba estaba en Pedidos. Esto es el ABM de a dónde llevas
+  // y cuánto cobras por llevarlo: configuración, hermana de Horario y Catálogo, que es justo
+  // donde ya está colocada. El `href` se deja intacto a propósito — renombrar la carpeta rompe
+  // marcadores guardados y no arregla nada: la URL no la lee nadie, la etiqueta sí.
+  { href: "/entregas", label: "Zonas de envío", icon: Truck },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
   { href: "/bot", label: "Mi Bot", icon: Bot },

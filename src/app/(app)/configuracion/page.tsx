@@ -826,7 +826,17 @@ function MetodosPago() {
     setConmutando(m.id);
     setError("");
     try {
-      await actualizarMetodoPago(m.id, { activo: !m.activo });
+      // 🔴 `PUT /api/metodos-pago/{id}` es un REEMPLAZO COMPLETO, no un parche. `MetodoPagoIn`
+      // exige `titulo` (sin default), así que el cuerpo `{activo}` que se mandaba aquí moría en
+      // Pydantic con un 422 ANTES de tocar la BD: este interruptor nunca guardó nada, y encima
+      // la dueña leía "[object Object]" (el detail de FastAPI es una LISTA).
+      // Y ojo con la tentación de "arreglarlo" en el backend poniéndole un default a `titulo`:
+      // `editar_metodo_pago` pisa los 12 campos con lo que llegue, así que un cuerpo parcial
+      // BORRARÍA banco, teléfono y cédula del método — los datos con los que se cobra. Hoy el
+      // 422 es lo único que protege ese dinero. Por eso el arreglo va aquí: se reenvía el método
+      // ENTERO tal como vino del GET (devuelve los 12 campos), con el interruptor cambiado.
+      const { id: _id, ...resto } = m;
+      await actualizarMetodoPago(m.id, { ...resto, activo: !m.activo });
       recargar();
     } catch (e) {
       setError((e as Error).message);

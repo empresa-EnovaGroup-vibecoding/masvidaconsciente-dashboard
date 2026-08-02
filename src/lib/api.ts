@@ -17,6 +17,41 @@ export function isLoggedIn(): boolean {
   return !!getToken();
 }
 
+/**
+ * Convierte el `detail` de FastAPI en UNA frase que una persona pueda leer.
+ *
+ * 🔴 Un 422 de Pydantic NO trae un texto: trae una LISTA de objetos
+ * (`[{loc:["body","titulo"], msg:"Field required"}, …]`). Como una lista es truthy,
+ * `err.detail || "Error"` la dejaba pasar tal cual y `new Error(lista)` acababa mostrando
+ * literalmente **"[object Object]"**. La dueña leía eso y no tenía forma de saber si el panel
+ * estaba roto o si le faltaba llenar un campo. (Auditoría 2026-08-02, API-3b.)
+ */
+function mensajeDeError(detail: unknown, porDefecto = "Error en la solicitud"): string {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const partes = detail
+      .map((d) => {
+        if (typeof d === "string") return d;
+        if (d && typeof d === "object") {
+          const e = d as { msg?: string; loc?: unknown[] };
+          // loc = ["body", "titulo"] → "titulo" (el "body" no le dice nada a nadie)
+          const campo = Array.isArray(e.loc)
+            ? e.loc.filter((x) => x !== "body" && typeof x !== "number").join(".")
+            : "";
+          if (e.msg) return campo ? `${campo}: ${e.msg}` : e.msg;
+        }
+        return "";
+      })
+      .filter(Boolean);
+    if (partes.length) return partes.join(" · ");
+  }
+  if (detail && typeof detail === "object") {
+    const m = (detail as { msg?: string }).msg;
+    if (typeof m === "string" && m.trim()) return m;
+  }
+  return porDefecto;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
@@ -34,7 +69,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Error" }));
-    throw new Error(err.detail || "Error en la solicitud");
+    throw new Error(mensajeDeError(err?.detail));
   }
   return res.json();
 }
@@ -47,7 +82,7 @@ export async function login(email: string, password: string) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Error" }));
-    throw new Error(err.detail || "Credenciales incorrectas");
+    throw new Error(mensajeDeError(err?.detail, "Credenciales incorrectas"));
   }
   const data = await res.json();
   setToken(data.access_token);
@@ -85,6 +120,18 @@ export interface Pedido {
   notas: string | null;
   // Para cuándo y cómo lo quiere ("sábado en la tarde, delivery en Cabudare").
   entrega?: string | null;
+  // ── LA ENTREGA Y EL FLETE ──────────────────────────────────────────────────────────────
+  // Estaban en la BD desde las migraciones 016 y 023, pero `GET /api/pedidos` no los devolvía:
+  // el bloque del calendario NUNCA se pintó (era opcional, así que compilaba sin una queja) y un
+  // pedido de $23 mostraba ítems por $20 sin nada que explicara los otros $3.
+  // ⚠️ `entrega_fecha` es una fecha SIN hora ("2026-08-05"): usar `formatFechaSola`, nunca
+  //    `formatFecha` — `new Date("2026-08-05")` es medianoche UTC y en Venezuela pinta el día
+  //    ANTERIOR. Es la fecha de entrega prometida: equivocarla cuesta una venta.
+  entrega_fecha?: string | null;
+  zona_nombre?: string | null;
+  costo_envio?: number | null;
+  /** total_usd − costo_envio. Para poder cuadrar a ojo: ítems + envío = total. */
+  subtotal_productos?: number | null;
   fecha: string;
   // Pago que impide editar/eliminar: 'confirmado' | 'parcial' | 'reportado' | null.
   pago_bloqueante?: string | null;
@@ -202,6 +249,12 @@ export interface Pago {
   referencia: string | null;
   tiene_comprobante: boolean;
   confirmado_por: string | null;
+  /** Estado del PEDIDO al que pertenece. Si es "cancelado", confirmar y verificar-monto
+   *  responden 409 (`_pedido_admite_cobro`, router.py). */
+  pedido_estado?: string | null;
+  /** Id de OTRO pago YA confirmado del mismo pedido. Mientras exista, confirmar y
+   *  verificar-monto responden 409 (`_no_hay_otro_pago_confirmado`): un pedido se cobra UNA vez. */
+  otro_pago_confirmado?: number | null;
   fecha: string;
 }
 
@@ -223,12 +276,16 @@ export interface ConfiguracionNegocio {
   hora_cierre: string | null;
   // Hasta qué hora se aceptan pedidos para el MISMO día. Es un candado del código.
   hora_corte: string | null;
-  // Modelo de IA con el que el bot conversa. Lo elige la proveedora.
-  modelo_ia: string | null;
+  // ── Claves de PROVEEDORA (espejo de CLAVES_PROVEEDORA en router.py) ────────────────────
+  // 🔴 OPCIONALES a propósito: el GET no las manda como null, las OMITE del JSON cuando quien
+  // pregunta es la dueña. Declararlas requeridas le prometía a TypeScript algo que en el
+  // navegador de ELLA es `undefined`: un `cfg.modelo_ia.trim()` compilaría limpio y reventaría
+  // solo en su panel, nunca en el de la proveedora — que es la única que prueba.
+  modelo_ia?: string | null;
   /** Fase 5: "uno" (agente único) | "dos" (Operador + Voz). Palanca de la PROVEEDORA. */
-  agente_modo: string | null;
-  modelo_operador: string | null;
-  modelo_voz: string | null;
+  agente_modo?: string | null;
+  modelo_operador?: string | null;
+  modelo_voz?: string | null;
 }
 
 /** Un día suelto en que el negocio NO entrega (viaje, feriado, vacaciones). */
@@ -546,7 +603,7 @@ export async function subirMediaProducto(productoId: number, file: File): Promis
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Error" }));
-    throw new Error(err.detail || "No se pudo subir el archivo");
+    throw new Error(mensajeDeError(err?.detail, "No se pudo subir el archivo"));
   }
   return res.json();
 }
@@ -594,7 +651,7 @@ export async function subirCatalogoPdf(file: File): Promise<void> {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Error" }));
-    throw new Error(err.detail || "No se pudo subir el catálogo");
+    throw new Error(mensajeDeError(err?.detail, "No se pudo subir el catálogo"));
   }
 }
 export const borrarCatalogoPdf = () => request("/api/catalogo-pdf", { method: "DELETE" });
