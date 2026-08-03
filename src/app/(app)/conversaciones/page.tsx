@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageCircle, Bot, Trash2, Send, User, AlertTriangle, Clock, FileText, HandHelping } from "lucide-react";
+import { MessageCircle, Bot, Trash2, Send, User, AlertTriangle, Clock, FileText, HandHelping, Lock } from "lucide-react";
 import {
   getConversaciones,
   getMensajes,
@@ -12,6 +12,7 @@ import {
   marcarLeido,
   responderCliente,
   pausarBotCliente,
+  marcarContactoPrivado,
   borrarConversacion,
   type ClaseMedia,
   type Conversacion,
@@ -120,6 +121,7 @@ function Conversaciones() {
   const [error, setError] = useState("");
   const [errorHilo, setErrorHilo] = useState("");
   const [cambiandoPausa, setCambiandoPausa] = useState(false);
+  const [cambiandoPrivado, setCambiandoPrivado] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [resumen, setResumen] = useState<ResumenChats | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -186,6 +188,9 @@ function Conversaciones() {
   // Son dos cosas MUY distintas: "lo tomé yo" vs "el bot se calló porque me necesita".
   const loTomeYo = pausado && porQuien !== "bot";
   const elBotPideAyuda = pausado && porQuien === "bot";
+  // CONTACTO PRIVADO: no es un cliente. Es independiente de la pausa (un chat puede estar
+  // privado Y tomado a la vez), por eso no entra en las dos constantes de arriba.
+  const esPrivado = estado?.privado ?? convActiva?.privado ?? false;
   const ventana = estado?.ventana;
   const puedeEscribir = !!ventana?.abierta && !estado?.es_simulador;
 
@@ -217,6 +222,31 @@ function Conversaciones() {
       setError((e as Error).message);
     } finally {
       setCambiandoPausa(false);
+    }
+  }
+
+  async function togglePrivado() {
+    if (!activa) return;
+    // Se confirma solo al ENCENDER: es lo que tiene consecuencia (el bot deja de atender a ese
+    // número para siempre y sus mensajes dejan de guardarse). Apagarlo devuelve las cosas a su
+    // sitio y no necesita permiso.
+    if (
+      !esPrivado &&
+      !window.confirm(
+        "¿Marcar este chat como CONTACTO PRIVADO?\n\nEs para tu familia, tus amigos o los clientes de tu otro negocio. El bot dejará de responderle a este número, no le marcará el mensaje como leído y lo que ESA PERSONA te escriba ya NO se guardará aquí: lo lees en tu teléfono, como cualquier chat personal. (Lo que le contestes TÚ desde tu celular sí se sigue guardando, por ahora.)\n\nSi alguna vez te compra comida, quítale la marca primero. Puedes deshacerlo cuando quieras desde este mismo botón.",
+      )
+    )
+      return;
+    setCambiandoPrivado(true);
+    setError("");
+    try {
+      await marcarContactoPrivado(activa, !esPrivado);
+      setEstado(await getEstadoConversacion(activa));
+      setConvs(await getConversaciones());
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setCambiandoPrivado(false);
     }
   }
 
@@ -317,6 +347,11 @@ function Conversaciones() {
                           {c.no_leidos}
                         </span>
                       )}
+                      {c.privado && (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-bg-subtle px-2 py-0.5 text-[11px] font-semibold text-fg-muted ring-1 ring-inset ring-borde">
+                          <Lock className="h-3 w-3" strokeWidth={2} />Privado
+                        </span>
+                      )}
                       {c.bot_pausado && (
                         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-[11px] font-semibold text-warn ring-1 ring-inset ring-warn-border">
                           {c.pausado_por === "bot" ? (
@@ -356,6 +391,27 @@ function Conversaciones() {
                       <Bot className="h-4 w-4" strokeWidth={1.8} />
                       {cambiandoPausa ? "…" : pausado ? "Devolver al bot" : "Yo atiendo"}
                     </button>
+                    {/* CONTACTO PRIVADO. Va AQUÍ, en la cabecera del chat, y no en una pantalla de
+                        ajustes: ella se da cuenta de que ese número es su tía LEYENDO EL CHAT, y
+                        el arreglo tiene que estar donde se da cuenta. Encendido se pinta como el
+                        botón activo (mismo lenguaje que "Devolver al bot"). */}
+                    <button
+                      onClick={togglePrivado}
+                      disabled={cambiandoPrivado}
+                      title={
+                        esPrivado
+                          ? "Quitar la marca de privado: el bot volverá a atender este número"
+                          : "Marcar como privado: es familia/amigos, el bot no debe responderle"
+                      }
+                      className={`focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${
+                        esPrivado
+                          ? "bg-accent text-accent-fg hover:bg-accent-soft"
+                          : "bg-bg text-fg ring-1 ring-borde hover:bg-bg-subtle"
+                      }`}
+                    >
+                      <Lock className="h-4 w-4" strokeWidth={1.8} />
+                      {cambiandoPrivado ? "…" : esPrivado ? "Es privado" : "Privado"}
+                    </button>
                     <button
                       onClick={borrarChat}
                       disabled={borrando}
@@ -373,6 +429,14 @@ function Conversaciones() {
                     Este chat lo estás atendiendo <span className="font-semibold">tú</span>: el bot no le
                     responde. Los demás clientes siguen atendidos. Cuando termines, dale{" "}
                     <span className="font-semibold">Devolver al bot</span>.
+                  </div>
+                )}
+                {esPrivado && (
+                  <div className="mb-4 rounded-xl bg-bg-subtle px-3 py-2.5 text-[13px] font-medium text-fg-muted ring-1 ring-inset ring-borde">
+                    <span className="font-semibold">Este es un contacto privado.</span> El bot no le
+                    responde y lo que <span className="font-semibold">esa persona</span> te escriba no se guarda
+                    aquí: lo lees en tu teléfono. Si algún día te compra, quítale la marca con el botón{" "}
+                    <span className="font-semibold">Es privado</span>.
                   </div>
                 )}
                 {elBotPideAyuda && (

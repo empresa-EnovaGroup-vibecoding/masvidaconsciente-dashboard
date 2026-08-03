@@ -194,6 +194,8 @@ export interface Conversacion {
   /** "dueña" = lo tomaste TÚ · "bot" = el bot se pausó solo al escalarte algo */
   pausado_por?: string | null;
   no_leidos?: number;
+  /** CONTACTO PRIVADO: familia/amigos/el otro negocio. El bot no le responde nunca. */
+  privado?: boolean;
 }
 
 export interface Mensaje {
@@ -226,6 +228,8 @@ export interface EstadoConversacion {
   /** "dueña" = lo tomaste TÚ · "bot" = el bot se pausó solo al escalarte algo */
   pausado_por?: string | null;
   no_leidos: number;
+  /** CONTACTO PRIVADO: no es un cliente (familia, amigos, el otro negocio). El bot lo ignora. */
+  privado?: boolean;
   ventana: VentanaChat;
   es_simulador: boolean;
 }
@@ -531,6 +535,17 @@ export const pausarBotCliente = (telefono: string, pausado: boolean) =>
   request(`/api/clientes/${encodeURIComponent(telefono)}/pausa`, {
     method: "PUT",
     body: JSON.stringify({ pausado }),
+  });
+/**
+ * CONTACTO PRIVADO: marca a alguien como NO-cliente (familia, amigos, el otro negocio).
+ * El bot deja de responderle para siempre y sus mensajes ya no se guardan.
+ * OJO: no es `pausarBotCliente`. Esa es "yo atiendo este chat ahora"; esta es "esta persona
+ * no es un cliente", y no se levanta con "Devolver al bot".
+ */
+export const marcarContactoPrivado = (telefono: string, privado: boolean) =>
+  request(`/api/clientes/${encodeURIComponent(telefono)}/privado`, {
+    method: "PUT",
+    body: JSON.stringify({ privado }),
   });
 export const editarCliente = (
   telefono: string,
