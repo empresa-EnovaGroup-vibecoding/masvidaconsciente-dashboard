@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, Lightbulb } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Lightbulb, Power } from "lucide-react";
 import {
   getConocimiento,
   crearConocimiento,
   editarConocimiento,
   borrarConocimiento,
+  activarConocimiento,
   type Conocimiento,
   type ConocimientoInput,
 } from "@/lib/api";
@@ -15,13 +16,17 @@ import { ErrorState } from "@/components/error-state";
 import { EmptyState } from "@/components/empty-state";
 import { inputCls } from "@/lib/ui";
 
+// La clave "productos" NO se saca aunque los ingredientes ya no vayan aquí: hay filas guardadas
+// con ese valor y su sección se titularía con la clave cruda. Se renombra para que se lea como lo
+// que es —lo antiguo— y se agrega "insumos", donde la 030 archiva la masa madre.
 const CATEGORIAS = [
   { key: "faq", label: "Preguntas frecuentes" },
-  { key: "productos", label: "Productos / Ingredientes" },
   { key: "horarios", label: "Horarios" },
   { key: "politicas", label: "Políticas (envíos, devoluciones)" },
   { key: "ubicacion", label: "Ubicación" },
+  { key: "insumos", label: "Insumos compartidos (masa madre, endulzantes…)" },
   { key: "empresa", label: "Sobre el negocio" },
+  { key: "productos", label: "Productos (antiguo — los ingredientes van en Catálogo)" },
 ];
 const LABEL: Record<string, string> = Object.fromEntries(CATEGORIAS.map((c) => [c.key, c.label]));
 
@@ -33,6 +38,7 @@ export default function ConocimientoPage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState<FormState | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [ocupado, setOcupado] = useState<number | null>(null);
 
   function recargar() {
     setError("");
@@ -82,6 +88,22 @@ export default function ConocimientoPage() {
       setError((e as Error).message);
     } finally {
       setGuardando(false);
+    }
+  }
+
+  // Retirar = el bot deja de verla, pero el texto QUEDA (y vuelve con otro clic). No recarga la
+  // lista entera: parchea la fila en memoria para que no se mueva de sitio bajo el ratón.
+  async function alternarActivo(i: Conocimiento) {
+    const nuevo = i.activo === false;
+    setOcupado(i.id);
+    setError("");
+    try {
+      await activarConocimiento(i.id, nuevo);
+      setItems((prev) => (prev ? prev.map((x) => (x.id === i.id ? { ...x, activo: nuevo } : x)) : prev));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setOcupado(null);
     }
   }
 
@@ -145,7 +167,9 @@ export default function ConocimientoPage() {
                 .map((i) => (
                   <li
                     key={i.id}
-                    className="flex items-start justify-between gap-4 px-6 py-4 transition-colors hover:bg-bg-subtle/50"
+                    className={`flex items-start justify-between gap-4 px-6 py-4 transition-colors hover:bg-bg-subtle/50 ${
+                      i.activo === false ? "opacity-60" : ""
+                    }`}
                   >
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/15">
@@ -159,6 +183,21 @@ export default function ConocimientoPage() {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
+                      {/* `i.activo === false`, nunca `!i.activo`: con una API vieja el campo llega
+                          undefined y TODO se pintaría como retirado. */}
+                      <button
+                        onClick={() => alternarActivo(i)}
+                        disabled={ocupado === i.id}
+                        className={`focus-ring inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset transition disabled:opacity-50 ${
+                          i.activo === false
+                            ? "bg-bg-subtle text-fg-muted ring-borde"
+                            : "bg-accent/10 text-accent ring-accent/15 hover:bg-accent/15"
+                        }`}
+                        title={i.activo === false ? "El bot NO la usa. Clic para reactivarla." : "El bot la usa. Clic para retirarla sin borrarla."}
+                      >
+                        <Power className="h-3.5 w-3.5" strokeWidth={2} />
+                        {i.activo === false ? "Retirada" : "El bot la usa"}
+                      </button>
                       <button
                         onClick={() =>
                           setForm({
@@ -261,6 +300,12 @@ export default function ConocimientoPage() {
                 >
                   Respuesta
                 </label>
+                <p className="mb-2 mt-1.5 text-[12px] font-medium leading-relaxed text-fg-muted">
+                  Escribe el DATO, no la orden. Bien: «La alulosa no cambia el precio». Mal: «Di algo
+                  como que no…» — el bot puede terminar leyéndolo tal cual. Y si es un dato de UN
+                  producto (de qué es, cuánto dura), va en su ficha en Catálogo: si el mismo dato
+                  vive en dos sitios, un día cambias uno y el bot lee el otro.
+                </p>
                 <textarea
                   id="conocimiento-contenido"
                   className={`${inputCls} resize-y`}

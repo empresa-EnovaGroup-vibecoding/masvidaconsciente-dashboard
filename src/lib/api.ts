@@ -372,9 +372,15 @@ export interface Conocimiento {
   categoria: string | null;
   titulo: string;
   contenido: string;
+  /** OPCIONAL a propósito: si el panel se despliega antes de que la API reinicie, el campo no
+   *  viene y nada se rompe. Se lee siempre como `activo !== false`. */
+  activo?: boolean;
 }
 
-export type ConocimientoInput = Omit<Conocimiento, "id">;
+/** `activo` FUERA del Omit: no se manda al crear ni al editar (tiene su propio endpoint, que no
+ *  recalcula el embedding). Y si fuera obligatorio, el objeto de conocimiento/page.tsx
+ *  dejaría de compilar y `tsc` se pondría en rojo. */
+export type ConocimientoInput = Omit<Conocimiento, "id" | "activo">;
 
 /** Un aviso de "el bot te necesita": el bot se calló en ese chat y te espera. */
 export interface Intervencion {
@@ -552,6 +558,14 @@ export const editarConocimiento = (id: number, data: ConocimientoInput) =>
   request(`/api/conocimiento/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 export const borrarConocimiento = (id: number) =>
   request(`/api/conocimiento/${id}`, { method: "DELETE" });
+// El interruptor "el bot la usa / retirada". Endpoint PROPIO, no el de edición: ese recalcula el
+// embedding en cada guardado, así que sin saldo en OpenRouter la fila perdería su vector por
+// tocar un interruptor. Retirar NO borra: el texto de la dueña queda y vuelve con otro clic.
+export const activarConocimiento = (id: number, activo: boolean) =>
+  request<{ ok: boolean; activo: boolean }>(`/api/conocimiento/${id}/activo`, {
+    method: "PATCH",
+    body: JSON.stringify({ activo }),
+  });
 export const getPedidos = () => request<Pedido[]>("/api/pedidos");
 export const cambiarEstadoPedido = (id: number, estado: string) =>
   request(`/api/pedidos/${id}`, { method: "PATCH", body: JSON.stringify({ estado }) });
