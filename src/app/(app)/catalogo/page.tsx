@@ -18,6 +18,7 @@ import {
   getMediaProducto,
   subirMediaProducto,
   borrarMedia,
+  etiquetarMedia,
   type Producto,
   type ProductoInput,
   type ProductoMedia,
@@ -328,6 +329,19 @@ export default function CatalogoPage() {
       await borrarMedia(id);
       setMedia((prev) => prev.filter((m) => m.id !== id));
       recargar();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  // QUÉ SE VE EN CADA FOTO ("base de plátano"). Es lo único que distingue dos fotos del mismo
+  // producto al mismo precio, y con ella el bot manda la correcta.
+  // 🔴 El estado se refresca aquí a la fuerza: sin el setMedia, `m.etiqueta` se quedaría con el
+  // valor viejo y CADA salida del campo volvería a mandar el mismo PATCH.
+  async function guardarEtiqueta(id: number, etiqueta: string | null) {
+    try {
+      await etiquetarMedia(id, etiqueta);
+      setMedia((prev) => prev.map((m) => (m.id === id ? { ...m, etiqueta } : m)));
     } catch (err) {
       setError((err as Error).message);
     }
@@ -845,24 +859,37 @@ export default function CatalogoPage() {
                     {media.length > 0 && (
                       <div className="grid grid-cols-3 gap-2">
                         {media.map((m) => (
-                          <div
-                            key={m.id}
-                            className="group relative aspect-square overflow-hidden rounded-lg ring-hair"
-                          >
-                            {m.tipo === "video" ? (
-                              <video src={m.url} className="h-full w-full object-cover" muted />
-                            ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={m.url} alt="" className="h-full w-full object-cover" />
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => eliminarMedia(m.id)}
-                              aria-label="Eliminar"
-                              className="absolute right-1 top-1 rounded-md bg-black/55 p-1 text-white opacity-0 transition group-hover:opacity-100"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
-                            </button>
+                          <div key={m.id} className="flex flex-col gap-1">
+                            <div className="group relative aspect-square overflow-hidden rounded-lg ring-hair">
+                              {m.tipo === "video" ? (
+                                <video src={m.url} className="h-full w-full object-cover" muted />
+                              ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={m.url} alt="" className="h-full w-full object-cover" />
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => eliminarMedia(m.id)}
+                                aria-label="Eliminar"
+                                className="absolute right-1 top-1 rounded-md bg-black/55 p-1 text-white opacity-0 transition group-hover:opacity-100"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+                              </button>
+                            </div>
+                            {/* QUÉ SE VE EN ESTA FOTO. Va FUERA del cuadrado (si entrara dentro
+                                rompería el aspect-square). Mismo patrón que los sabores:
+                                escribes y sales del campo, sin botón de guardar. */}
+                            <input
+                              className={`${inputCls} h-7 text-[11px]`}
+                              defaultValue={m.etiqueta ?? ""}
+                              maxLength={60}
+                              placeholder="¿qué es? ej. base de plátano"
+                              onBlur={(e) => {
+                                const val = e.target.value.trim() || null;
+                                if (val !== (m.etiqueta ?? null)) void guardarEtiqueta(m.id, val);
+                              }}
+                              aria-label="Qué se ve en esta foto"
+                            />
                           </div>
                         ))}
                       </div>
@@ -885,6 +912,12 @@ export default function CatalogoPage() {
                     </label>
                     <p className="text-[11px] text-fg-faint">
                       Fotos hasta 5 MB · videos MP4 hasta 16 MB (límite de WhatsApp).
+                    </p>
+                    <p className="text-[11px] text-fg-faint">
+                      Si dos fotos del mismo producto son distintas (una de plátano, otra de
+                      yuca), escribe debajo de cada una qué es: así el bot manda la correcta y el
+                      cliente sabe cuál le llegó. Si son la misma cosa, déjalo vacío. Sin precios
+                      aquí. (Si borras la foto se pierde su nombre.)
                     </p>
                   </>
                 ) : (

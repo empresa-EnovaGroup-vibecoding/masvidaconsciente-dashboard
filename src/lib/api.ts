@@ -180,6 +180,9 @@ export interface ProductoMedia {
   id: number;
   tipo: string; // 'imagen' | 'video'
   url: string;
+  /** QUÉ SE VE en esta foto, en palabras de la dueña ("base de plátano"). null = foto neutra:
+   *  es lo único que distingue dos fotos del mismo producto al mismo precio. */
+  etiqueta: string | null;
 }
 
 export interface Conversacion {
@@ -609,6 +612,8 @@ export async function subirMediaProducto(productoId: number, file: File): Promis
 }
 export const borrarMedia = (mediaId: number) =>
   request(`/api/media/${mediaId}`, { method: "DELETE" });
+export const etiquetarMedia = (mediaId: number, etiqueta: string | null) =>
+  request(`/api/media/${mediaId}`, { method: "PATCH", body: JSON.stringify({ etiqueta }) });
 export const getFeriados = () => request<Feriado[]>("/api/feriados");
 export const crearFeriado = (fecha: string, motivo?: string | null) =>
   request("/api/feriados", { method: "POST", body: JSON.stringify({ fecha, motivo: motivo ?? null }) });
