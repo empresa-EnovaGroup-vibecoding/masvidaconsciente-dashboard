@@ -12,12 +12,17 @@ import {
   getHerramientas,
   guardarHerramientas,
   type Herramienta,
+  type MediaSimulador,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
 import { ErrorState } from "@/components/error-state";
 import { Switch } from "@/components/switch";
+import { Adjunto } from "@/components/adjunto";
 
-type MsgSim = { rol: "user" | "assistant"; texto: string };
+/** `media` = lo que el bot le "envió" en ese turno (fotos, video, el catálogo en PDF). Cuelga
+ *  del mensaje del bot y NO entra en el historial que se le manda al agente: el historial es
+ *  conversación, y la media ya la narra el propio texto. */
+type MsgSim = { rol: "user" | "assistant"; texto: string; media?: MediaSimulador[] };
 
 /** QUÉ SABE HACER EL BOT — solo la proveedora (Enova).
  *
@@ -214,8 +219,8 @@ export default function BotPage() {
     setPensando(true);
     setErrorS("");
     try {
-      const { respuesta } = await probarBot(txt, historial);
-      setMensajes((prev) => [...prev, { rol: "assistant", texto: respuesta }]);
+      const { respuesta, media } = await probarBot(txt, historial);
+      setMensajes((prev) => [...prev, { rol: "assistant", texto: respuesta, media }]);
     } catch (e) {
       setErrorS((e as Error).message);
     } finally {
@@ -373,15 +378,30 @@ export default function BotPage() {
             ) : (
               <>
                 {mensajes.map((m, i) => (
-                  <div key={i} className={`flex ${m.rol === "user" ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
-                        m.rol === "user"
-                          ? "rounded-br-md bg-accent font-medium text-accent-fg"
-                          : "rounded-bl-md bg-bg text-fg ring-hair"
-                      }`}
-                    >
-                      {m.texto}
+                  <div key={i} className="space-y-2.5">
+                    {/* La media ANTES del texto, en el mismo orden que le llega al cliente por
+                        WhatsApp: la herramienta la envía y después el bot la comenta. Sin esto,
+                        el bot decía "te acabo de enviar el catálogo" y aquí no aparecía nada. */}
+                    {m.media?.map((med) => (
+                      <div key={med.id} className="flex justify-start">
+                        <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-bg p-1.5 ring-hair">
+                          <Adjunto mensajeId={med.id} />
+                          <p className="px-2 pb-0.5 pt-1.5 text-[12px] font-medium text-fg-muted">
+                            {med.contenido}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className={`flex ${m.rol === "user" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
+                          m.rol === "user"
+                            ? "rounded-br-md bg-accent font-medium text-accent-fg"
+                            : "rounded-bl-md bg-bg text-fg ring-hair"
+                        }`}
+                      >
+                        {m.texto}
+                      </div>
                     </div>
                   </div>
                 ))}

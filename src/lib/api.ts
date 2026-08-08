@@ -515,11 +515,18 @@ export const guardarTasa = (datos: {
 export const getPersonalidad = () => request<Personalidad>("/api/personalidad");
 export const guardarPersonalidad = (personalidad: string) =>
   request("/api/personalidad", { method: "PUT", body: JSON.stringify({ personalidad }) });
+/** Una foto/video/PDF que el bot "envió" en un turno del simulador. Se pinta con `Adjunto`. */
+export type MediaSimulador = {
+  id: number;
+  tipo: string;       // image | video | document
+  contenido: string;  // el pie de la burbuja, ej. "(foto de Pan de Sándwich — de yuca)"
+};
+
 export const probarBot = (
   mensaje: string,
   historial: { role: string; content: string }[],
 ) =>
-  request<{ respuesta: string }>("/api/probar", {
+  request<{ respuesta: string; media?: MediaSimulador[] }>("/api/probar", {
     method: "POST",
     body: JSON.stringify({ mensaje, historial }),
   });
