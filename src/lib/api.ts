@@ -183,6 +183,10 @@ export interface ProductoMedia {
   /** QUÉ SE VE en esta foto, en palabras de la dueña ("base de plátano"). null = foto neutra:
    *  es lo único que distingue dos fotos del mismo producto al mismo precio. */
   etiqueta: string | null;
+  /** LA CARA del producto (★): la foto que el bot manda primero y la miniatura del catálogo.
+   *  Opcional a propósito (mismo patrón que `Conocimiento.activo`): si el panel se despliega
+   *  antes que la API del bot, el campo no viene y nada revienta. Leerlo como `=== true`. */
+  es_principal?: boolean;
 }
 
 export interface Conversacion {
@@ -650,6 +654,10 @@ export const borrarMedia = (mediaId: number) =>
   request(`/api/media/${mediaId}`, { method: "DELETE" });
 export const etiquetarMedia = (mediaId: number, etiqueta: string | null) =>
   request(`/api/media/${mediaId}`, { method: "PATCH", body: JSON.stringify({ etiqueta }) });
+/** Marca ESTA foto como la principal (★) de su producto. La estrella se MUEVE marcando otra:
+ * el bot apaga la anterior en la misma transacción. Solo imágenes (un video no es miniatura). */
+export const marcarMediaPrincipal = (mediaId: number) =>
+  request(`/api/media/${mediaId}/principal`, { method: "PATCH" });
 export const getFeriados = () => request<Feriado[]>("/api/feriados");
 export const crearFeriado = (fecha: string, motivo?: string | null) =>
   request("/api/feriados", { method: "POST", body: JSON.stringify({ fecha, motivo: motivo ?? null }) });
