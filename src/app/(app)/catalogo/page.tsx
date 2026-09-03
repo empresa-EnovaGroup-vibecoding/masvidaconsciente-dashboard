@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, X, FileText, Upload, Trash2, Package } from "lucide-react";
+import { Plus, Pencil, X, FileText, Upload, Trash2, Package, Star } from "lucide-react";
 import {
   getProductos,
   crearProducto,
@@ -19,6 +19,7 @@ import {
   subirMediaProducto,
   borrarMedia,
   etiquetarMedia,
+  marcarMediaPrincipal,
   type Producto,
   type ProductoInput,
   type ProductoMedia,
@@ -342,6 +343,19 @@ export default function CatalogoPage() {
     try {
       await etiquetarMedia(id, etiqueta);
       setMedia((prev) => prev.map((m) => (m.id === id ? { ...m, etiqueta } : m)));
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  // LA ★: la cara del producto — la foto que el bot manda primero y la miniatura del catálogo.
+  // La actualización local es EXCLUSIVA (una sola principal, la estrella se mueve), y `recargar()`
+  // refresca la miniatura de la tarjeta (mismo motivo que en eliminarMedia).
+  async function marcarPrincipal(id: number) {
+    try {
+      await marcarMediaPrincipal(id);
+      setMedia((prev) => prev.map((m) => ({ ...m, es_principal: m.id === id })));
+      recargar();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -875,6 +889,33 @@ export default function CatalogoPage() {
                               >
                                 <Trash2 className="h-3.5 w-3.5" strokeWidth={1.8} />
                               </button>
+                              {/* LA ★ — solo en imágenes (un video no puede ser la miniatura).
+                                  La principal se ve SIEMPRE (rellena); las demás, al pasar el
+                                  mouse (hueca) para moverle la estrella. */}
+                              {m.tipo !== "video" &&
+                                (m.es_principal === true ? (
+                                  <span
+                                    aria-label="Foto principal"
+                                    title="La foto principal: el bot la manda primero"
+                                    className="absolute left-1 top-1 rounded-md bg-black/55 p-1 text-amber-300"
+                                  >
+                                    <Star
+                                      className="h-3.5 w-3.5"
+                                      strokeWidth={1.8}
+                                      fill="currentColor"
+                                    />
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => marcarPrincipal(m.id)}
+                                    aria-label="Marcar como foto principal"
+                                    title="Marcar como la foto principal"
+                                    className="absolute left-1 top-1 rounded-md bg-black/55 p-1 text-white opacity-0 transition group-hover:opacity-100"
+                                  >
+                                    <Star className="h-3.5 w-3.5" strokeWidth={1.8} />
+                                  </button>
+                                ))}
                             </div>
                             {/* QUÉ SE VE EN ESTA FOTO. Va FUERA del cuadrado (si entrara dentro
                                 rompería el aspect-square). Mismo patrón que los sabores:
@@ -912,6 +953,11 @@ export default function CatalogoPage() {
                     </label>
                     <p className="text-[11px] text-fg-faint">
                       Fotos hasta 5 MB · videos MP4 hasta 16 MB (límite de WhatsApp).
+                    </p>
+                    <p className="text-[11px] text-fg-faint">
+                      La foto con ★ es la cara del producto: la que el bot manda primero y la
+                      miniatura del catálogo. Pasa el mouse sobre otra foto para moverle la
+                      estrella. Sin ★ marcada, va la primera que subiste.
                     </p>
                     <p className="text-[11px] text-fg-faint">
                       Si dos fotos del mismo producto son distintas (una de plátano, otra de
