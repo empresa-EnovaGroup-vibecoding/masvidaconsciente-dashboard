@@ -128,6 +128,11 @@ export interface Pedido {
   //    `formatFecha` — `new Date("2026-08-05")` es medianoche UTC y en Venezuela pinta el día
   //    ANTERIOR. Es la fecha de entrega prometida: equivocarla cuesta una venta.
   entrega_fecha?: string | null;
+  // LA ENTREGA COMPLETA (migración 038, 6-sep): la FRANJA que eligió el cliente (de la lista
+  // cerrada de la dueña) y su punto de REFERENCIA. La hora exacta la confirma la dueña según su
+  // ruta. Opcionales: los pedidos anteriores a la 038 no los traen.
+  entrega_franja?: string | null;
+  entrega_referencia?: string | null;
   zona_nombre?: string | null;
   costo_envio?: number | null;
   /** total_usd − costo_envio. Para poder cuadrar a ojo: ítems + envío = total. */
@@ -287,6 +292,9 @@ export interface ConfiguracionNegocio {
   hora_cierre: string | null;
   // Hasta qué hora se aceptan pedidos para el MISMO día. Es un candado del código.
   hora_corte: string | null;
+  // FRANJAS DE ENTREGA (6-sep): una por línea. El cliente elige UNA (nunca una hora exacta: esa
+  // la confirma la dueña según su ruta). Vacío = las de fábrica del bot.
+  franjas_entrega: string | null;
   // ── Claves de PROVEEDORA (espejo de CLAVES_PROVEEDORA en router.py) ────────────────────
   // 🔴 OPCIONALES a propósito: el GET no las manda como null, las OMITE del JSON cuando quien
   // pregunta es la dueña. Declararlas requeridas le prometía a TypeScript algo que en el
