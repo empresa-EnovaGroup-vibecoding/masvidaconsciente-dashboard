@@ -2,12 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { login } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // 👁️ VER LA CLAVE MIENTRAS SE ESCRIBE (lo pidió Maired, 6-sep). Dos paneles con claves que
+  // se diferenciaban en UNA mayúscula ("Masvida" vs "MasVida") + el autorrelleno de Chrome =
+  // tres días de "Email o contraseña incorrectos" sin poder ver qué se estaba mandando. Con el
+  // ojito, la dueña ve exactamente lo que va a enviar antes de darle a Ingresar.
+  const [verClave, setVerClave] = useState(false);
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
 
@@ -51,15 +57,30 @@ export default function LoginPage() {
           </div>
           <div>
             <label htmlFor="password" className="block text-xs font-medium text-fg-muted mb-1.5">Contraseña</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="focus-ring w-full rounded-xl ring-1 ring-borde bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-fg-faint transition"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={verClave ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="focus-ring w-full rounded-xl ring-1 ring-borde bg-bg px-3.5 py-2.5 pr-11 text-sm text-fg placeholder:text-fg-faint transition"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setVerClave((v) => !v)}
+                aria-label={verClave ? "Ocultar contraseña" : "Ver contraseña"}
+                title={verClave ? "Ocultar contraseña" : "Ver contraseña"}
+                className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-fg-muted hover:text-fg transition"
+              >
+                {verClave ? (
+                  <EyeOff className="h-4 w-4" strokeWidth={1.8} />
+                ) : (
+                  <Eye className="h-4 w-4" strokeWidth={1.8} />
+                )}
+              </button>
+            </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
