@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarDays, Clock, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, Clock, Plus, Trash2, Truck } from "lucide-react";
 import {
   getConfiguracion,
   guardarConfiguracion,
@@ -25,6 +25,10 @@ const DIAS = [
   { clave: "domingo", nombre: "Domingo" },
 ];
 
+// Las franjas de fábrica del bot (espejo de `_FRANJAS_DEFAULT` en tools.py). Se enseñan como
+// ejemplo cuando la dueña no ha escrito las suyas: el bot usa exactamente estas.
+const FRANJAS_EJEMPLO = "en la mañana (10 a 12)\nen la tarde (2 a 6)";
+
 /** La fecha como la diría una persona: "sábado 18 de julio". */
 function fechaBonita(iso: string): string {
   const [a, m, d] = iso.split("-").map(Number);
@@ -35,6 +39,9 @@ function fechaBonita(iso: string): string {
 export default function HorarioPage() {
   const [dias, setDias] = useState<string[] | null>(null);
   const [horas, setHoras] = useState({ apertura: "08:00", cierre: "18:00", corte: "18:00" });
+  // FRANJAS DE ENTREGA (6-sep): una por línea. El cliente elige una; la hora exacta la pone ella.
+  const [franjas, setFranjas] = useState("");
+  const [franjasGuardadas, setFranjasGuardadas] = useState("");
   const [feriados, setFeriados] = useState<Feriado[]>([]);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -56,6 +63,14 @@ export default function HorarioPage() {
           cierre: c.hora_cierre || "18:00",
           corte: c.hora_corte || "18:00",
         });
+        // Se guardan con comas o saltos de línea; aquí se enseñan una por línea.
+        const f = (c.franjas_entrega ?? "")
+          .split(/[\n,;]+/)
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .join("\n");
+        setFranjas(f);
+        setFranjasGuardadas(f);
       })
       .catch((e) => setError(e.message));
     getFeriados().then(setFeriados).catch(() => {});
@@ -77,6 +92,24 @@ export default function HorarioPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar la hora");
       cargar();
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function guardarFranjas() {
+    const limpias = franjas
+      .split(/[\n,;]+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+    setGuardando(true);
+    setError("");
+    try {
+      await guardarConfiguracion({ franjas_entrega: limpias.join("\n") });
+      setFranjas(limpias.join("\n"));
+      setFranjasGuardadas(limpias.join("\n"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudieron guardar las franjas");
     } finally {
       setGuardando(false);
     }
@@ -221,6 +254,45 @@ export default function HorarioPage() {
               Si te queda muy justo, bájala (por ejemplo, a las 2:00 pm).
               {guardando && <span className="ml-2 text-accent">Guardando…</span>}
             </p>
+          </section>
+
+          {/* LAS FRANJAS DE ENTREGA (6-sep). Regla de negocio de Maired: el cliente NO elige una
+              hora, elige una franja de ESTA lista; la hora exacta la pone la dueña según su ruta y
+              la confirma ella. Sin escribir nada, el bot usa las de fábrica (FRANJAS_EJEMPLO). */}
+          <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">
+            <div className="mb-1 flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent ring-1 ring-accent/15">
+                <Truck className="h-[18px] w-[18px]" strokeWidth={1.8} />
+              </div>
+              <h2 className="text-[17px] font-extrabold num-snug text-fg">Franjas de entrega</h2>
+            </div>
+            <p className="mb-4 text-[13px] font-medium text-fg-muted">
+              El cliente <span className="font-semibold text-fg">no elige una hora</span>: elige una
+              de estas franjas y el bot la anota en el pedido. La hora exacta la pones tú según tu
+              ruta y se la confirmas tú. Una franja por línea.
+            </p>
+            <textarea
+              value={franjas}
+              onChange={(e) => setFranjas(e.target.value)}
+              rows={3}
+              placeholder={FRANJAS_EJEMPLO}
+              className={`${inputCls} min-h-[84px] resize-y`}
+              aria-label="Franjas de entrega, una por línea"
+            />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                onClick={guardarFranjas}
+                disabled={guardando || franjas.trim() === franjasGuardadas.trim()}
+                className="focus-ring rounded-xl bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+              >
+                Guardar franjas
+              </button>
+              <p className="text-[12px] font-medium text-fg-faint">
+                {franjas.trim()
+                  ? "El bot ofrece exactamente estas, y ninguna otra."
+                  : "Sin escribir nada, el bot usa las del ejemplo."}
+              </p>
+            </div>
           </section>
 
           <section className="rounded-2xl bg-bg p-6 shadow-card ring-hair">

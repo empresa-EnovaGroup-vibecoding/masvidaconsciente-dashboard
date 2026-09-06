@@ -40,6 +40,7 @@ const VACIO: ConfiguracionNegocio = {
   hora_apertura: "",
   hora_cierre: "",
   hora_corte: "",
+  franjas_entrega: "",
   modelo_ia: "",
   agente_modo: "",
   modelo_operador: "",

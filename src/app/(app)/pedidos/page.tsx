@@ -586,6 +586,33 @@ export default function PedidosPage() {
                   </p>
                 )}
 
+                {/* LA ENTREGA COMPLETA (038, 6-sep): la FRANJA que eligió el cliente y su punto
+                    de REFERENCIA. Es lo que la dueña necesita para armar la ruta y confirmar la
+                    hora. Un delivery sin dirección se marca en rojo: el bot ya no puede cobrarlo
+                    sin ella, pero los pedidos anteriores a la 038 pueden venir sin dato. */}
+                {(p.entrega || p.entrega_fecha || p.zona_nombre) && (
+                  <div className="mb-2 space-y-0.5 text-[13px] font-medium text-fg-muted">
+                    <p>
+                      Franja:{" "}
+                      {p.entrega_franja ? (
+                        <span className="text-fg">{p.entrega_franja}</span>
+                      ) : (
+                        <span className="italic">sin elegir (la hora la confirmas tú)</span>
+                      )}
+                    </p>
+                    {((p.costo_envio ?? 0) > 0 || p.entrega_referencia) && (
+                      <p>
+                        Referencia:{" "}
+                        {p.entrega_referencia ? (
+                          <span className="text-fg">{p.entrega_referencia}</span>
+                        ) : (
+                          <span className="font-semibold text-red-600">falta la dirección</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {p.notas && <p className="mb-4 text-[13px] italic text-fg-muted">Nota: {p.notas}</p>}
 
                 {editando !== p.id && (
