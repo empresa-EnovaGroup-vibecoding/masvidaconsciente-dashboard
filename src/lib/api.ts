@@ -497,6 +497,21 @@ export const cambiarRolUsuario = (id: number, rol: Rol) =>
 export const borrarUsuario = (id: number) =>
   request<{ ok: boolean }>(`/api/usuarios/${id}`, { method: "DELETE" });
 
+/** La dueña (o cualquier usuario no principal) cambia SU contraseña: exige la actual.
+ * La cuenta principal (Enova) la rechaza el bot: vive en el servidor y se re-sincroniza al arrancar. */
+export const cambiarMiPassword = (actual: string, nueva: string) =>
+  request<{ ok: boolean }>("/api/usuarios/me/password", {
+    method: "PATCH",
+    body: JSON.stringify({ actual, nueva }),
+  });
+
+/** La proveedora le pone una contraseña nueva a quien la olvidó ("Restablecer clave"). */
+export const restablecerPasswordUsuario = (id: number, nueva: string) =>
+  request<{ ok: boolean }>(`/api/usuarios/${id}/password`, {
+    method: "PATCH",
+    body: JSON.stringify({ nueva }),
+  });
+
 export const getConfiguracion = () => request<ConfiguracionNegocio>("/api/configuracion");
 
 export const getModelosOpenRouter = () =>

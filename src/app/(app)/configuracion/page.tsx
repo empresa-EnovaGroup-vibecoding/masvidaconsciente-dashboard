@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useState } from "react";
-import { Check, Lock, Plus, Pencil, Trash2, X, Wallet } from "lucide-react";
+import { Check, Eye, EyeOff, KeyRound, Lock, Plus, Pencil, Trash2, X, Wallet } from "lucide-react";
 import {
   getConfiguracion,
   getModelosOpenRouter,
@@ -15,6 +15,8 @@ import {
   crearUsuario,
   cambiarRolUsuario,
   borrarUsuario,
+  cambiarMiPassword,
+  restablecerPasswordUsuario,
   type ConfiguracionNegocio,
   type MetodoPago,
   type Rol,
@@ -477,6 +479,8 @@ export default function ConfiguracionPage() {
             </Seccion>
           )}
 
+          <SeccionMiClave />
+
           {esProveedora && <SeccionUsuarios />}
 
           <div className="flex items-center gap-3">
@@ -575,6 +579,31 @@ function SeccionUsuarios() {
     }
   }
 
+  // "OLVIDÉ MI CONTRASEÑA", versión de esta casa: la proveedora le pone una nueva desde aquí
+  // (lo pidió Maired, 6-sep). Sin correos ni códigos que dependan de la ventana de 24h de
+  // WhatsApp — un solo cliente, y Enova como guardián. `window.prompt` es el mismo molde que el
+  // `window.confirm` de borrar: una acción de un solo dato no merece un formulario.
+  async function restablecer(u: UsuarioPanel) {
+    const nueva = window.prompt(
+      `Contraseña NUEVA para ${u.email} (mínimo 8 caracteres). Se la das tú a la persona:`,
+    );
+    if (nueva === null) return;
+    if (nueva.length < 8) {
+      setError("La contraseña nueva debe tener al menos 8 caracteres.");
+      return;
+    }
+    setOcupado(u.id);
+    setError("");
+    try {
+      await restablecerPasswordUsuario(u.id, nueva);
+      window.alert(`Listo: ${u.email} ya entra con la contraseña nueva.`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setOcupado(null);
+    }
+  }
+
   return (
     <Seccion
       titulo="Usuarios del panel · solo Enova"
@@ -596,6 +625,16 @@ function SeccionUsuarios() {
               <Lock className="h-4 w-4 shrink-0 text-fg-faint" strokeWidth={1.8} />
             ) : (
               <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => restablecer(u)}
+                  disabled={ocupado === u.id}
+                  title="Ponerle una contraseña nueva (si la olvidó)"
+                  className="focus-ring inline-flex items-center gap-1 rounded-lg bg-bg px-2.5 py-1.5 text-[12px] font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
+                >
+                  <KeyRound className="h-3.5 w-3.5" strokeWidth={1.8} />
+                  Restablecer clave
+                </button>
                 <button
                   type="button"
                   onClick={() => conmutarRol(u)}
@@ -688,6 +727,94 @@ function SeccionUsuarios() {
           </div>
         </form>
       )}
+    </Seccion>
+  );
+}
+
+/**
+ * MI CONTRASEÑA (lo pidió Maired, 6-sep): la dueña cambia la suya sin llamar a nadie.
+ * Exige la actual (un token de una sesión abierta no basta para cerrarle la puerta a la persona
+ * real) y trae el ojito para ver lo que escribe — la lección de tres días de "incorrectos" por
+ * una mayúscula. La cuenta principal (Enova) la rechaza el bot con su mensaje: vive en el
+ * servidor y se re-sincroniza en cada arranque (la red anti-bloqueo).
+ */
+function SeccionMiClave() {
+  const [actual, setActual] = useState("");
+  const [nueva, setNueva] = useState("");
+  const [confirmar, setConfirmar] = useState("");
+  const [ver, setVer] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState("");
+  const [listo, setListo] = useState(false);
+
+  async function cambiar(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setListo(false);
+    if (nueva.length < 8) {
+      setError("La contraseña nueva debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (nueva !== confirmar) {
+      setError("La confirmación no coincide con la contraseña nueva.");
+      return;
+    }
+    setOcupado(true);
+    try {
+      await cambiarMiPassword(actual, nueva);
+      setActual("");
+      setNueva("");
+      setConfirmar("");
+      setListo(true);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  const tipo = ver ? "text" : "password";
+  return (
+    <Seccion
+      titulo="Mi contraseña"
+      nota="Cámbiala cuando quieras. Te pedimos la actual por seguridad. Si la olvidaste y no puedes entrar, Enova te pone una nueva desde Usuarios."
+    >
+      <ErrorBanner mensaje={error} />
+      {listo && (
+        <p className="rounded-xl bg-bg-subtle px-3 py-2 text-sm font-medium text-fg ring-1 ring-borde">
+          ✅ Contraseña cambiada. La próxima vez entras con la nueva.
+        </p>
+      )}
+      <form onSubmit={cambiar} className="space-y-3">
+        <Campo label="Contraseña actual">
+          <input className={inputCls} type={tipo} required autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} />
+        </Campo>
+        <Campo label="Contraseña nueva (mínimo 8 caracteres)">
+          <input className={inputCls} type={tipo} required minLength={8} autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} />
+        </Campo>
+        <Campo label="Repite la contraseña nueva">
+          <input className={inputCls} type={tipo} required minLength={8} autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} />
+        </Campo>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="submit"
+            disabled={ocupado}
+            className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+          >
+            <KeyRound className="h-4 w-4" strokeWidth={1.8} />
+            {ocupado ? "Cambiando…" : "Cambiar contraseña"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setVer((v) => !v)}
+            aria-label={ver ? "Ocultar contraseñas" : "Ver contraseñas"}
+            className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-bg px-3 py-2 text-sm font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle"
+          >
+            {ver ? <EyeOff className="h-4 w-4" strokeWidth={1.8} /> : <Eye className="h-4 w-4" strokeWidth={1.8} />}
+            {ver ? "Ocultar" : "Ver lo que escribo"}
+          </button>
+        </div>
+      </form>
     </Seccion>
   );
 }
