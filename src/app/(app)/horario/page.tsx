@@ -25,9 +25,10 @@ const DIAS = [
   { clave: "domingo", nombre: "Domingo" },
 ];
 
-// Las franjas de fábrica del bot (espejo de `_FRANJAS_DEFAULT` en tools.py). Se enseñan como
-// ejemplo cuando la dueña no ha escrito las suyas: el bot usa exactamente estas.
-const FRANJAS_EJEMPLO = "en la mañana (10 a 12)\nen la tarde (2 a 6)";
+// Los momentos de entrega de fábrica (espejo de `_FRANJAS_DEFAULT` en tools.py). Se escriben TAL
+// CUAL se le dicen al cliente ("de 10 a 12 de la mañana"): el bot los repite con sus palabras y
+// nunca dice "franja". Sin escribir nada, usa exactamente estos.
+const FRANJAS_EJEMPLO = "de 10 a 12 de la mañana\nde 2 a 6 de la tarde";
 
 /** La fecha como la diría una persona: "sábado 18 de julio". */
 function fechaBonita(iso: string): string {
@@ -267,9 +268,10 @@ export default function HorarioPage() {
               <h2 className="text-[17px] font-extrabold num-snug text-fg">Franjas de entrega</h2>
             </div>
             <p className="mb-4 text-[13px] font-medium text-fg-muted">
-              El cliente <span className="font-semibold text-fg">no elige una hora</span>: elige una
-              de estas franjas y el bot la anota en el pedido. La hora exacta la pones tú según tu
-              ruta y se la confirmas tú. Una franja por línea.
+              El cliente <span className="font-semibold text-fg">no elige una hora</span>: elige uno
+              de estos momentos y el bot lo anota en el pedido. Escríbelos como se los dirías tú
+              ("de 10 a 12 de la mañana"): el bot los repite así y nunca dice "franja". La hora
+              exacta la pones tú según tu ruta y se la confirmas tú. Uno por línea.
             </p>
             <textarea
               value={franjas}
