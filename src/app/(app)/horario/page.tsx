@@ -28,8 +28,7 @@ const DIAS = [
 // Los momentos de entrega de fábrica (espejo de `_FRANJAS_DEFAULT` en tools.py). Se escriben TAL
 // CUAL se le dicen al cliente ("de 10 a 12 de la mañana"): el bot los repite con sus palabras y
 // nunca dice "franja". Sin escribir nada, usa exactamente estos.
-const FRANJAS_EJEMPLO = "de 10 a 12 de la mañana
-de 2 a 6 de la tarde";
+const FRANJAS_EJEMPLO = "de 10 a 12 de la mañana\nde 2 a 6 de la tarde";
 
 /** La fecha como la diría una persona: "sábado 18 de julio". */
 function fechaBonita(iso: string): string {
