@@ -3,23 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutGrid, BellRing, BarChart3, ShoppingBag, Wallet, Coins, CalendarDays, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut, Menu, X, Truck } from "lucide-react";
+import { LayoutGrid, BellRing, BarChart3, ShoppingBag, Wallet, Coins, CalendarDays, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut, Menu, X, Truck, ChevronDown } from "lucide-react";
 import { clearToken, isLoggedIn, getPagos, getIntervenciones, getConfiguracion, type ConfiguracionNegocio } from "@/lib/api";
 
 type Destino = { href: string; label: string; icon: typeof LayoutGrid };
 
 // El menú sigue el trabajo de la dueña, no el orden en que se programaron las pantallas.
 // Ver primero lo urgente, luego vender, organizar el negocio y, por último, ajustar a Alejandra.
-const INICIO: Destino = { href: "/dashboard", label: "Resumen de hoy", icon: LayoutGrid };
-const SECCIONES_NAVEGACION: { titulo: string; destinos: Destino[] }[] = [
+const DESTINOS_PRINCIPALES: Destino[] = [
+  { href: "/dashboard", label: "Resumen de hoy", icon: LayoutGrid },
+  { href: "/bandeja", label: "El bot te necesita", icon: BellRing },
+  { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
+];
+const SECCIONES_NAVEGACION: { id: string; titulo: string; destinos: Destino[] }[] = [
   {
-    titulo: "Atender clientes",
-    destinos: [
-      { href: "/bandeja", label: "El bot te necesita", icon: BellRing },
-      { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
-    ],
-  },
-  {
+    id: "ventas",
     titulo: "Ventas",
     destinos: [
       { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
@@ -29,6 +27,7 @@ const SECCIONES_NAVEGACION: { titulo: string; destinos: Destino[] }[] = [
     ],
   },
   {
+    id: "negocio",
     titulo: "Organizar mi negocio",
     destinos: [
       { href: "/clientes", label: "Clientes", icon: Users },
@@ -39,6 +38,7 @@ const SECCIONES_NAVEGACION: { titulo: string; destinos: Destino[] }[] = [
     ],
   },
   {
+    id: "alejandra",
     titulo: "Alejandra",
     destinos: [
       { href: "/bot", label: "Probar a Alejandra", icon: Bot },
@@ -46,11 +46,12 @@ const SECCIONES_NAVEGACION: { titulo: string; destinos: Destino[] }[] = [
       { href: "/mensajes", label: "Mensajes automáticos", icon: MessageSquare },
     ],
   },
-  {
-    titulo: "Ajustes",
-    destinos: [{ href: "/configuracion", label: "Configuración", icon: Settings }],
-  },
 ];
+const CONFIGURACION: Destino = { href: "/configuracion", label: "Configuración", icon: Settings };
+
+function seccionDeRuta(pathname: string) {
+  return SECCIONES_NAVEGACION.find(({ destinos }) => destinos.some(({ href }) => href === pathname))?.id ?? null;
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -60,6 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [avisos, setAvisos] = useState(0);
   const [config, setConfig] = useState<ConfiguracionNegocio | null>(null);
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [seccionAbierta, setSeccionAbierta] = useState<string | null>(() => seccionDeRuta(pathname));
 
   useEffect(() => {
     if (!isLoggedIn()) router.replace("/login");
@@ -89,6 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // En celular, cerrar el menú al cambiar de página.
   useEffect(() => {
     setMenuAbierto(false);
+    setSeccionAbierta(seccionDeRuta(pathname));
   }, [pathname]);
 
   if (!listo) return null;
@@ -102,7 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const ubicacion = config?.negocio_ubicacion?.trim() || "Panel";
   const inicial = negocio.charAt(0).toUpperCase();
 
-  function enlace({ href, label, icon: Icon }: Destino) {
+  function enlace({ href, label, icon: Icon }: Destino, anidado = false) {
     const activo = pathname === href;
     return (
       <Link
@@ -110,7 +113,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         href={href}
         onClick={() => setMenuAbierto(false)}
         aria-current={activo ? "page" : undefined}
-        className={`focus-ring flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+        className={`focus-ring flex items-center gap-3 rounded-xl py-2.5 text-sm transition-colors ${anidado ? "pl-7 pr-3" : "px-3"} ${
           activo
             ? "bg-accent/10 text-accent font-semibold"
             : "text-fg-muted font-medium hover:bg-bg-subtle hover:text-fg"
@@ -167,15 +170,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav aria-label="Navegación principal" className="flex-1 overflow-y-auto px-3 py-2">
-          {enlace(INICIO)}
-          {SECCIONES_NAVEGACION.map(({ titulo, destinos }) => (
-            <section key={titulo} className="mt-4" aria-labelledby={`nav-${titulo.replaceAll(" ", "-")}`}>
-              <h2 id={`nav-${titulo.replaceAll(" ", "-")}`} className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-fg-muted">
-                {titulo}
-              </h2>
-              <div className="space-y-0.5">{destinos.map(enlace)}</div>
-            </section>
-          ))}
+          <div className="space-y-0.5">{DESTINOS_PRINCIPALES.map((destino) => enlace(destino))}</div>
+
+          <div className="my-3 border-t border-borde/70" />
+
+          <div className="space-y-1">
+            {SECCIONES_NAVEGACION.map(({ id, titulo, destinos }) => {
+              const abierta = seccionAbierta === id;
+              const activa = destinos.some(({ href }) => href === pathname);
+              return (
+                <section key={id}>
+                  <button
+                    type="button"
+                    onClick={() => setSeccionAbierta(abierta ? null : id)}
+                    aria-expanded={abierta}
+                    aria-controls={`nav-${id}`}
+                    className={`focus-ring flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                      activa
+                        ? "bg-accent/10 text-accent"
+                        : "text-fg-muted hover:bg-bg-subtle hover:text-fg"
+                    }`}
+                  >
+                    <span className="flex-1 text-left">{titulo}</span>
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform duration-200 ${abierta ? "rotate-180" : ""}`}
+                      strokeWidth={1.8}
+                    />
+                  </button>
+                  {abierta && (
+                    <div id={`nav-${id}`} className="mt-0.5 space-y-0.5">
+                      {destinos.map((destino) => enlace(destino, true))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+
+          <div className="my-3 border-t border-borde/70" />
+          {enlace(CONFIGURACION)}
         </nav>
 
         <div className="border-t border-borde/70 p-3">
