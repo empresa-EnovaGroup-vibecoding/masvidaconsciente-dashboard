@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useId, useState } from "react";
-import { Check, Eye, EyeOff, KeyRound, Lock, Plus, Pencil, Trash2, X, Wallet } from "lucide-react";
+import { Check, Eye, EyeOff, KeyRound, Lock, Plus, Pencil, Trash2, X, Wallet, Bot, Users } from "lucide-react";
 import {
   getConfiguracion,
   getModelosOpenRouter,
@@ -17,10 +17,15 @@ import {
   borrarUsuario,
   cambiarMiPassword,
   restablecerPasswordUsuario,
+  getListaBlanca,
+  guardarListaBlanca,
+  devolverChatsAlBot,
   type ConfiguracionNegocio,
   type MetodoPago,
   type Rol,
   type UsuarioPanel,
+  type ListaBlanca,
+  type EstadoListaBlanca,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
 import { ErrorState } from "@/components/error-state";
@@ -338,6 +343,8 @@ export default function ConfiguracionPage() {
             </Campo>
           </Seccion>
 
+          <SeccionListaBlanca />
+
           {/* SOLO LA PROVEEDORA (Enova). El modelo del bot ya estaba documentado como "palanca
               de PROVEEDOR, no de la clienta" (CLAUDE.md §5) — pero hasta la migración 024 no
               había roles y la dueña podía cambiárselo. Esconderlo aquí es cosmético: la puerta
@@ -502,6 +509,169 @@ export default function ConfiguracionPage() {
         </div>
       )}
     </div>
+  );
+}
+
+const ESTADO_LISTA: Record<EstadoListaBlanca, { texto: string; tono: string }> = {
+  bot_listo: { texto: "Listo · Alejandra responde", tono: "text-accent" },
+  atendido_por_ti: { texto: "Autorizado, pero lo atiendes tú", tono: "text-warn" },
+  bot_pide_ayuda: { texto: "Alejandra pidió ayuda", tono: "text-warn" },
+  esperando_primer_mensaje: { texto: "Esperando su primer mensaje", tono: "text-fg-muted" },
+  privado: { texto: "Privado · Alejandra no responde", tono: "text-fg-muted" },
+};
+
+/** Incorporación segura de clientes al piloto: autorización y pausa se ven juntas. */
+function SeccionListaBlanca() {
+  const [lista, setLista] = useState<ListaBlanca | null>(null);
+  const [texto, setTexto] = useState("");
+  const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [reactivando, setReactivando] = useState(false);
+
+  function cargar() {
+    setError("");
+    getListaBlanca()
+      .then((r) => {
+        setLista(r);
+        setTexto(r.numeros_extra.join("\n"));
+      })
+      .catch((e: Error) => setError(e.message));
+  }
+
+  useEffect(cargar, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function guardar() {
+    const numeros = texto.split(/[\n,;]+/).map((n) => n.trim()).filter(Boolean);
+    setGuardando(true);
+    setGuardado(false);
+    setError("");
+    try {
+      const r = await guardarListaBlanca(numeros);
+      setLista(r);
+      setTexto(r.numeros_extra.join("\n"));
+      setSeleccionados(new Set());
+      setGuardado(true);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  function alternar(telefono: string) {
+    setSeleccionados((actual) => {
+      const siguiente = new Set(actual);
+      if (siguiente.has(telefono)) siguiente.delete(telefono);
+      else siguiente.add(telefono);
+      return siguiente;
+    });
+  }
+
+  async function reactivar() {
+    const numeros = Array.from(seleccionados);
+    if (!numeros.length) return;
+    if (!window.confirm(
+      `¿Devolver ${numeros.length === 1 ? "este chat" : `estos ${numeros.length} chats`} a Alejandra?\n\nPuede responder inmediatamente lo que el cliente dejó pendiente. Ningún otro chat cambiará.`,
+    )) return;
+    setReactivando(true);
+    setError("");
+    try {
+      await devolverChatsAlBot(numeros);
+      setSeleccionados(new Set());
+      const r = await getListaBlanca();
+      setLista(r);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setReactivando(false);
+    }
+  }
+
+  const pausados = lista?.clientes.filter((c) => c.estado === "atendido_por_ti") ?? [];
+
+  return (
+    <Seccion
+      titulo="Clientes que probarán a Alejandra"
+      nota="Estos números forman la lista blanca: Alejandra solo atiende a quienes están aquí y al número fijo del sistema. Agregar un número no interrumpe una conversación que tú ya estabas atendiendo."
+    >
+      <ErrorBanner mensaje={error} />
+      {lista?.abierta_a_todos && (
+        <div className="rounded-xl bg-red-50 px-3 py-2.5 text-[13px] font-semibold text-red-700 ring-1 ring-inset ring-red-200">
+          La lista está abierta a todo el mundo. Guarda números concretos para volver al piloto controlado.
+        </div>
+      )}
+      <Campo label="Un WhatsApp por línea (con código de país)">
+        <textarea
+          className={`${inputCls} min-h-28 resize-y`}
+          value={texto}
+          onChange={(e) => {
+            setTexto(e.target.value);
+            setGuardado(false);
+          }}
+          placeholder={"584125551234\n584145556789"}
+        />
+      </Campo>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => void guardar()}
+          disabled={guardando}
+          className="focus-ring inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+        >
+          <Users className="h-4 w-4" /> {guardando ? "Guardando…" : "Guardar lista"}
+        </button>
+        {guardado && <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent"><Check className="h-4 w-4" />Lista guardada</span>}
+      </div>
+
+      {lista && lista.clientes.length > 0 && (
+        <div className="mt-2 overflow-hidden rounded-xl ring-1 ring-borde">
+          <ul className="divide-y divide-borde/60">
+            {lista.clientes.map((cliente) => {
+              const estado = ESTADO_LISTA[cliente.estado];
+              const puedeReactivar = cliente.estado === "atendido_por_ti";
+              return (
+                <li key={cliente.telefono} className="flex min-w-0 items-center gap-3 px-3 py-3">
+                  {puedeReactivar ? (
+                    <input
+                      type="checkbox"
+                      checked={seleccionados.has(cliente.telefono)}
+                      onChange={() => alternar(cliente.telefono)}
+                      aria-label={`Seleccionar ${cliente.nombre || cliente.telefono}`}
+                      className="focus-ring h-4 w-4 shrink-0 rounded border-borde text-accent"
+                    />
+                  ) : (
+                    <Bot className="h-4 w-4 shrink-0 text-fg-muted" strokeWidth={1.8} />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-fg">{cliente.nombre || cliente.telefono}</p>
+                    <p className="truncate text-[12px] font-medium text-fg-muted">
+                      {cliente.telefono}{cliente.origen === "fijo" ? " · número fijo" : ""}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 text-right text-[11px] font-semibold ${estado.tono}`}>{estado.texto}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {pausados.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-warn-bg px-3 py-2.5 ring-1 ring-inset ring-warn-border">
+          <p className="text-[12px] font-medium text-warn">
+            {pausados.length} {pausados.length === 1 ? "cliente autorizado sigue" : "clientes autorizados siguen"} atendido por ti. Marca únicamente los que quieras devolver.
+          </p>
+          <button
+            onClick={() => void reactivar()}
+            disabled={!seleccionados.size || reactivando}
+            className="focus-ring rounded-lg bg-accent px-3 py-2 text-[12px] font-semibold text-accent-fg disabled:opacity-40"
+          >
+            {reactivando ? "Devolviendo…" : `Devolver seleccionados (${seleccionados.size})`}
+          </button>
+        </div>
+      )}
+    </Seccion>
   );
 }
 

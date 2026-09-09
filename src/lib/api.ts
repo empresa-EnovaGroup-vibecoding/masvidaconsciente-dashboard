@@ -245,8 +245,40 @@ export interface EstadoConversacion {
 
 /** Cuántos chats tienes tomados tú (el bot está callado ahí) y cuántos sin leer. */
 export interface ResumenChats {
+  chats_total: number;
   chats_tomados: number;
   chats_sin_leer: number;
+  bot_activo: number;
+  bot_pide_ayuda: number;
+  privados: number;
+}
+
+export type FiltroConversaciones = "todos" | "no_leidos" | "bot" | "mios" | "ayuda" | "privados";
+
+export interface EventoConversacion {
+  telefono: string;
+  motivo: string;
+}
+
+export type EstadoListaBlanca =
+  | "esperando_primer_mensaje"
+  | "privado"
+  | "bot_pide_ayuda"
+  | "atendido_por_ti"
+  | "bot_listo";
+
+export interface ClienteListaBlanca {
+  telefono: string;
+  nombre: string | null;
+  origen: "fijo" | "extra";
+  estado: EstadoListaBlanca;
+}
+
+export interface ListaBlanca {
+  abierta_a_todos: boolean;
+  numeros_fijos: string[];
+  numeros_extra: string[];
+  clientes: ClienteListaBlanca[];
 }
 
 export type EstadoPago = "reportado" | "confirmado" | "rechazado" | "parcial";
@@ -727,14 +759,74 @@ export async function subirCatalogoPdf(file: File): Promise<void> {
   }
 }
 export const borrarCatalogoPdf = () => request("/api/catalogo-pdf", { method: "DELETE" });
-export const getConversaciones = () => request<Conversacion[]>("/api/conversaciones");
+export const getConversaciones = (opciones?: { q?: string; filtro?: FiltroConversaciones }) => {
+  const params = new URLSearchParams();
+  if (opciones?.q?.trim()) params.set("q", opciones.q.trim());
+  if (opciones?.filtro && opciones.filtro !== "todos") params.set("filtro", opciones.filtro);
+  const query = params.toString();
+  return request<Conversacion[]>(`/api/conversaciones${query ? `?${query}` : ""}`);
+};
 export const getMensajes = (telefono: string) =>
-  request<Mensaje[]>(`/api/conversaciones/${telefono}`);
+  request<Mensaje[]>(`/api/conversaciones/${encodeURIComponent(telefono)}`);
 export const borrarConversacion = (telefono: string) =>
   request(`/api/conversaciones/${encodeURIComponent(telefono)}`, { method: "DELETE" });
 export const getResumenChats = () => request<ResumenChats>("/api/conversaciones-resumen");
 export const marcarLeido = (telefono: string) =>
   request(`/api/conversaciones/${encodeURIComponent(telefono)}/leido`, { method: "POST" });
+
+export async function escucharEventosConversaciones(
+  alCambiar: (evento: EventoConversacion) => void,
+  signal: AbortSignal,
+): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/api/conversaciones-eventos`, {
+    headers: {
+      Accept: "text/event-stream",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    signal,
+    cache: "no-store",
+  });
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new Error("Sesión expirada");
+  }
+  if (!res.ok || !res.body) throw new Error("No se pudo abrir la actualización en vivo");
+
+  const lector = res.body.getReader();
+  const decoder = new TextDecoder();
+  let pendiente = "";
+  while (!signal.aborted) {
+    const { value, done } = await lector.read();
+    if (done) break;
+    pendiente += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+    const bloques = pendiente.split("\n\n");
+    pendiente = bloques.pop() ?? "";
+    for (const bloque of bloques) {
+      const evento = bloque.split("\n").find((l) => l.startsWith("event:"))?.slice(6).trim();
+      const dato = bloque.split("\n").find((l) => l.startsWith("data:"))?.slice(5).trim();
+      if (evento !== "cambio" || !dato) continue;
+      try {
+        alCambiar(JSON.parse(dato) as EventoConversacion);
+      } catch {
+        // Un evento mal formado no rompe la conexión: el siguiente cambio vuelve a refrescar.
+      }
+    }
+  }
+}
+
+export const getListaBlanca = () => request<ListaBlanca>("/api/lista-blanca");
+export const guardarListaBlanca = (telefonos: string[]) =>
+  request<ListaBlanca>("/api/lista-blanca", {
+    method: "PUT",
+    body: JSON.stringify({ telefonos }),
+  });
+export const devolverChatsAlBot = (telefonos: string[]) =>
+  request<{ ok: boolean; reactivados: string[]; omitidos: string[] }>("/api/clientes-pausa-lote", {
+    method: "PUT",
+    body: JSON.stringify({ telefonos }),
+  });
 
 /**
  * El archivo de UN mensaje del hilo (el comprobante que mandó el cliente). Igual que el de

@@ -1,8 +1,11 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageCircle, Bot, Trash2, Send, User, AlertTriangle, Clock, HandHelping, Lock } from "lucide-react";
+import {
+  MessageCircle, Bot, Trash2, Send, User, AlertTriangle, Clock,
+  Lock, Search, X, CheckSquare,
+} from "lucide-react";
 import {
   getConversaciones,
   getMensajes,
@@ -13,14 +16,16 @@ import {
   pausarBotCliente,
   marcarContactoPrivado,
   borrarConversacion,
+  devolverChatsAlBot,
+  escucharEventosConversaciones,
   type Conversacion,
   type Mensaje,
   type EstadoConversacion,
   type ResumenChats,
+  type FiltroConversaciones,
 } from "@/lib/api";
 import { ErrorBanner } from "@/components/error-banner";
 import { ErrorState } from "@/components/error-state";
-import { EmptyState } from "@/components/empty-state";
 import { Adjunto } from "@/components/adjunto";
 
 /** "4 h 12 min" — lo que le queda para poder escribirle (la regla de las 24h de WhatsApp). */
@@ -34,6 +39,15 @@ function restante(minutos: number): string {
 function hora(fecha: string): string {
   return new Date(fecha).toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit" });
 }
+
+const FILTROS: { id: FiltroConversaciones; label: string; cuenta?: keyof ResumenChats }[] = [
+  { id: "todos", label: "Todos", cuenta: "chats_total" },
+  { id: "no_leidos", label: "No leídos", cuenta: "chats_sin_leer" },
+  { id: "bot", label: "Alejandra atiende", cuenta: "bot_activo" },
+  { id: "mios", label: "Atiendo yo", cuenta: "chats_tomados" },
+  { id: "ayuda", label: "Necesitan ayuda", cuenta: "bot_pide_ayuda" },
+  { id: "privados", label: "Privados", cuenta: "privados" },
+];
 
 /** `useSearchParams` obliga a un Suspense en Next 15: si no, el build falla. */
 export default function ConversacionesPage() {
@@ -62,22 +76,32 @@ function Conversaciones() {
   const [cambiandoPrivado, setCambiandoPrivado] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [resumen, setResumen] = useState<ResumenChats | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [busquedaAplicada, setBusquedaAplicada] = useState("");
+  const [filtro, setFiltro] = useState<FiltroConversaciones>("todos");
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set());
+  const [devolviendoLote, setDevolviendoLote] = useState(false);
+  const [enVivo, setEnVivo] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLen = useRef(0);
 
   const cargar = useCallback(() => {
-    getConversaciones()
+    getConversaciones({ q: busquedaAplicada, filtro })
       .then((c) => { setConvs(c); setError(""); })
       .catch((e) => { setError((e as Error).message); });
     // Cuántos chats tienes tomados. La pausa NO caduca sola (así lo decidiste): sin este
     // aviso, un "ya te escribo" desde el celular deja el bot mudo en ese chat para siempre.
     getResumenChats().then(setResumen).catch(() => { /* el aviso es secundario */ });
-  }, []);
+  }, [busquedaAplicada, filtro]);
 
   useEffect(() => {
     cargar();
-    const id = setInterval(cargar, 3000);  // cada 3s: se siente en tiempo real (7s se sentía lento)
-    return () => { clearInterval(id); };
+  }, [busqueda]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setBusquedaAplicada(busqueda.trim()), 250);
+    return () => window.clearTimeout(id);
   }, [cargar]);
 
   // El hilo + si PUEDES escribirle ahora mismo (van juntos: sin lo segundo, la caja de texto
@@ -95,9 +119,51 @@ function Conversaciones() {
   useEffect(() => {
     if (!activa) return;
     cargarHilo();
-    const id = setInterval(cargarHilo, 3000);  // el hilo abierto también, cada 3s
-    return () => { clearInterval(id); };
   }, [activa, cargarHilo]);
+
+  // Una conexión abierta y silenciosa reemplaza cuatro peticiones cada 3 segundos. Solo se
+  // vuelve a pedir información cuando Redis avisa que algo cambió; si la red cae, reconecta.
+  useEffect(() => {
+    let detenido = false;
+    let controlador: AbortController | null = null;
+    let espera: number | null = null;
+
+    async function conectar() {
+      while (!detenido) {
+        controlador = new AbortController();
+        try {
+          setEnVivo(true);
+          await escucharEventosConversaciones((evento) => {
+            cargar();
+            if (!evento.telefono || evento.telefono === activa) cargarHilo();
+          }, controlador.signal);
+        } catch (e) {
+          if (!controlador.signal.aborted) setEnVivo(false);
+        }
+        if (detenido) break;
+        await new Promise<void>((resolve) => {
+          espera = window.setTimeout(resolve, 3000);
+        });
+        cargar();
+        cargarHilo();
+      }
+    }
+
+    void conectar();
+    const alVolver = () => {
+      if (document.visibilityState === "visible") {
+        cargar();
+        cargarHilo();
+      }
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => {
+      detenido = true;
+      controlador?.abort();
+      if (espera !== null) window.clearTimeout(espera);
+      document.removeEventListener("visibilitychange", alVolver);
+    };
+  }, [activa, cargar, cargarHilo]);
 
   // Al abrir un chat o cuando entra un mensaje nuevo, baja solo al último (como WhatsApp).
   useEffect(() => {
@@ -155,7 +221,7 @@ function Conversaciones() {
     try {
       await pausarBotCliente(activa, !pausado);
       cargarHilo();
-      setConvs(await getConversaciones());
+      cargar();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -180,7 +246,7 @@ function Conversaciones() {
     try {
       await marcarContactoPrivado(activa, !esPrivado);
       setEstado(await getEstadoConversacion(activa));
-      setConvs(await getConversaciones());
+      cargar();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -204,7 +270,7 @@ function Conversaciones() {
       setMensajes([]);
       setEstado(null);
       prevLen.current = 0;
-      setConvs(await getConversaciones());
+      cargar();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -212,28 +278,78 @@ function Conversaciones() {
     }
   }
 
+  const seleccionables = useMemo(
+    () => (convs ?? []).filter((c) => c.bot_pausado && c.pausado_por !== "bot" && !c.privado),
+    [convs],
+  );
+
+  function alternarSeleccion(telefono: string) {
+    setSeleccionados((actuales) => {
+      const siguientes = new Set(actuales);
+      if (siguientes.has(telefono)) siguientes.delete(telefono);
+      else siguientes.add(telefono);
+      return siguientes;
+    });
+  }
+
+  function cerrarSeleccion() {
+    setSeleccionando(false);
+    setSeleccionados(new Set());
+  }
+
+  async function devolverSeleccionados() {
+    const telefonos = Array.from(seleccionados);
+    if (!telefonos.length || devolviendoLote) return;
+    if (!window.confirm(
+      `¿Devolver ${telefonos.length === 1 ? "este chat" : `estos ${telefonos.length} chats`} a Alejandra?\n\nEl bot podrá responder lo que el cliente dejó pendiente. Los demás chats no cambian.`,
+    )) return;
+    setDevolviendoLote(true);
+    setError("");
+    try {
+      await devolverChatsAlBot(telefonos);
+      cerrarSeleccion();
+      cargar();
+      if (activa && telefonos.includes(activa)) cargarHilo();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDevolviendoLote(false);
+    }
+  }
+
   return (
     <div>
-      <header className="mb-7">
-        <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Conversaciones</h1>
-        <p className="mt-1 text-[15px] font-medium text-fg-muted">
-          Los chats de WhatsApp con tus clientes. Puedes responder tú desde aquí.
-        </p>
+      <header className="mb-7 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Conversaciones</h1>
+          <p className="mt-1 text-[15px] font-medium text-fg-muted">
+            Busca clientes y mira claramente quién está atendiendo cada chat.
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full bg-bg px-3 py-1.5 text-[12px] font-semibold text-fg-muted ring-hair">
+          <span className={`h-2 w-2 rounded-full ${enVivo ? "bg-accent" : "bg-warn"}`} />
+          {enVivo ? "Actualización en vivo" : "Reconectando…"}
+        </span>
       </header>
 
       <ErrorBanner mensaje={error} />
 
       {!!resumen?.chats_tomados && (
-        <div className="mb-5 flex flex-wrap items-center gap-2 rounded-2xl bg-warn-bg px-4 py-3 text-[13px] font-medium text-warn ring-1 ring-inset ring-warn-border">
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-warn-bg px-4 py-3 text-[13px] font-medium text-warn ring-1 ring-inset ring-warn-border">
           <User className="h-4 w-4 shrink-0" strokeWidth={2} />
-          <span>
-            El bot está callado en{" "}
+          <span className="min-w-0 flex-1">
+            Tienes{" "}
             <span className="font-bold">
               {resumen.chats_tomados} {resumen.chats_tomados === 1 ? "chat" : "chats"}
             </span>{" "}
-            porque los estás atendiendo tú. Ahí no responde a nadie hasta que le des{" "}
-            <span className="font-semibold">Devolver al bot</span>.
+            atendidos por ti. Alejandra permanece en silencio únicamente en esos chats.
           </span>
+          <button
+            onClick={() => setFiltro("mios")}
+            className="focus-ring shrink-0 rounded-lg bg-bg px-3 py-1.5 font-semibold text-warn ring-1 ring-inset ring-warn-border transition hover:bg-bg-subtle"
+          >
+            Ver y organizar
+          </button>
         </div>
       )}
 
@@ -252,71 +368,157 @@ function Conversaciones() {
           </div>
           <div className="h-[420px] animate-pulse rounded-2xl bg-bg shadow-card ring-hair md:col-span-2" />
         </div>
-      ) : convs.length === 0 ? (
-        <EmptyState
-          icon={MessageCircle}
-          titulo="Aún no hay conversaciones"
-          texto="Aparecerán cuando los clientes escriban por WhatsApp."
-        />
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          <div className="overflow-hidden rounded-2xl bg-bg shadow-card ring-hair">
-            <ul className="divide-y divide-borde/60">
+        <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,2.05fr)]">
+          <div className="flex min-h-[420px] min-w-0 max-h-[calc(100dvh-13rem)] flex-col overflow-hidden rounded-2xl bg-bg shadow-card ring-hair">
+            <div className="shrink-0 border-b border-borde/60 p-3">
+              <label className="relative block">
+                <span className="sr-only">Buscar por nombre o teléfono</span>
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-fg-muted" strokeWidth={2} />
+                <input
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Buscar nombre o teléfono…"
+                  className="focus-ring h-10 w-full rounded-xl bg-bg-subtle pl-9 pr-9 text-sm font-medium text-fg ring-1 ring-inset ring-borde placeholder:text-fg-muted"
+                />
+                {busqueda && (
+                  <button
+                    onClick={() => setBusqueda("")}
+                    className="focus-ring absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-fg-muted hover:text-fg"
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </label>
+              <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1" aria-label="Filtrar conversaciones">
+                {FILTROS.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      setFiltro(f.id);
+                      cerrarSeleccion();
+                    }}
+                    className={`focus-ring shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                      filtro === f.id
+                        ? "bg-accent text-accent-fg"
+                        : "bg-bg text-fg-muted ring-1 ring-inset ring-borde hover:bg-bg-subtle"
+                    }`}
+                  >
+                    {f.label}{f.cuenta && resumen ? ` ${resumen[f.cuenta]}` : ""}
+                  </button>
+                ))}
+              </div>
+              {seleccionando ? (
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-bg-subtle px-2.5 py-2">
+                  <span className="text-[12px] font-semibold text-fg-muted">{seleccionados.size} elegidos</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => void devolverSeleccionados()}
+                      disabled={!seleccionados.size || devolviendoLote}
+                      className="focus-ring rounded-lg bg-accent px-2.5 py-1.5 text-[11px] font-semibold text-accent-fg disabled:opacity-40"
+                    >
+                      {devolviendoLote ? "Devolviendo…" : "Devolver al bot"}
+                    </button>
+                    <button onClick={cerrarSeleccion} className="focus-ring rounded-lg px-2 py-1.5 text-[11px] font-semibold text-fg-muted hover:bg-bg">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : seleccionables.length > 0 ? (
+                <button
+                  onClick={() => setSeleccionando(true)}
+                  className="focus-ring mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-accent hover:bg-accent/10"
+                >
+                  <CheckSquare className="h-3.5 w-3.5" /> Seleccionar chats para devolver
+                </button>
+              ) : null}
+            </div>
+            <ul className="min-h-0 flex-1 divide-y divide-borde/60 overflow-y-auto">
+              {convs.length === 0 && (
+                <li className="px-5 py-10 text-center">
+                  <MessageCircle className="mx-auto h-6 w-6 text-fg-muted" strokeWidth={1.7} />
+                  <p className="mt-2 text-sm font-semibold text-fg">No encontramos conversaciones</p>
+                  <p className="mt-1 text-[12px] font-medium text-fg-muted">Prueba otro nombre, teléfono o filtro.</p>
+                </li>
+              )}
               {convs.map((c) => {
                 const seleccionada = activa === c.telefono;
+                const elegible = c.bot_pausado && c.pausado_por !== "bot" && !c.privado;
                 return (
                   <li key={c.telefono} className="relative overflow-hidden">
                     {seleccionada && <span className="absolute left-0 top-0 h-full w-1 bg-accent" />}
-                    <button
-                      onClick={() => abrir(c.telefono)}
-                      className={`focus-ring flex w-full items-center gap-4 px-6 py-4 text-left transition-colors ${
+                    <div
+                      className={`flex w-full items-center gap-3 px-4 py-3 transition-colors ${
                         seleccionada ? "bg-bg-subtle/50" : "hover:bg-bg-subtle/50"
                       }`}
                     >
+                      {seleccionando && elegible && (
+                        <input
+                          type="checkbox"
+                          checked={seleccionados.has(c.telefono)}
+                          onChange={() => alternarSeleccion(c.telefono)}
+                          aria-label={`Seleccionar ${c.nombre || c.telefono}`}
+                          className="focus-ring h-4 w-4 shrink-0 rounded border-borde text-accent"
+                        />
+                      )}
+                      <button onClick={() => abrir(c.telefono)} className="focus-ring flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
                         {(c.nombre || c.telefono || "?").charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1 leading-tight">
-                        <p className="truncate font-bold text-fg">{c.nombre || c.telefono}</p>
-                        <p className="mt-0.5 truncate text-[13px] font-medium text-fg-muted">{c.ultimo_mensaje || "—"}</p>
-                      </div>
-                      {!!c.no_leidos && (
-                        <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-accent-fg tnum">
-                          {c.no_leidos}
-                        </span>
-                      )}
-                      {c.privado && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-bg-subtle px-2 py-0.5 text-[11px] font-semibold text-fg-muted ring-1 ring-inset ring-borde">
-                          <Lock className="h-3 w-3" strokeWidth={2} />Privado
-                        </span>
-                      )}
-                      {c.bot_pausado && (
-                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-[11px] font-semibold text-warn ring-1 ring-inset ring-warn-border">
-                          {c.pausado_por === "bot" ? (
-                            <><HandHelping className="h-3 w-3" strokeWidth={2} />Te necesita</>
-                          ) : (
-                            <><User className="h-3 w-3" strokeWidth={2} />Tú</>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className="min-w-0 flex-1 truncate font-bold text-fg">{c.nombre || c.telefono}</p>
+                          {!!c.no_leidos && (
+                            <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-accent-fg tnum">
+                              {c.no_leidos}
+                            </span>
                           )}
-                        </span>
-                      )}
-                    </button>
+                        </div>
+                        <p className="mt-0.5 truncate text-[13px] font-medium text-fg-muted">{c.ultimo_mensaje || "—"}</p>
+                        <p className={`mt-1 truncate text-[11px] font-semibold ${
+                          c.privado ? "text-fg-muted" : c.bot_pausado ? "text-warn" : "text-accent"
+                        }`}>
+                          {c.privado
+                            ? "Privado · el bot no responde"
+                            : c.bot_pausado && c.pausado_por === "bot"
+                              ? "Alejandra pidió ayuda"
+                              : c.bot_pausado
+                                ? "Bot pausado · atiendes tú"
+                                : "Alejandra atiende"}
+                        </p>
+                      </div>
+                      </button>
+                    </div>
                   </li>
                 );
               })}
             </ul>
           </div>
 
-          <div className="flex min-h-[420px] max-h-[calc(100dvh-13rem)] flex-col rounded-2xl bg-bg p-6 shadow-card ring-hair md:col-span-2">
+          <div className="flex min-h-[420px] min-w-0 max-h-[calc(100dvh-13rem)] flex-col overflow-hidden rounded-2xl bg-bg p-4 shadow-card ring-hair sm:p-6">
             {activa ? (
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="mb-4 flex items-center justify-between gap-2 border-b border-borde/60 pb-4">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-borde/60 pb-4">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-bold text-accent ring-1 ring-accent/15">
                       {(convActiva?.nombre || activa || "?").charAt(0).toUpperCase()}
                     </div>
-                    <p className="truncate font-bold text-fg">{convActiva?.nombre || activa}</p>
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-fg">{convActiva?.nombre || activa}</p>
+                      <p className="truncate text-[12px] font-medium text-fg-muted">{activa}</p>
+                      <p className={`mt-0.5 text-[11px] font-semibold ${esPrivado ? "text-fg-muted" : pausado ? "text-warn" : "text-accent"}`}>
+                        {esPrivado
+                          ? "Privado · el bot no responde"
+                          : elBotPideAyuda
+                            ? "Alejandra pidió ayuda"
+                            : loTomeYo
+                              ? "Bot pausado · atiendes tú"
+                              : "Alejandra atiende"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
                     <button
                       onClick={togglePausa}
                       disabled={cambiandoPausa}
@@ -354,7 +556,7 @@ function Conversaciones() {
                       onClick={borrarChat}
                       disabled={borrando}
                       title="Borrar este chat"
-                      className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 ring-1 ring-red-600/20 transition hover:bg-red-50 disabled:opacity-50"
+                      className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-fg-muted ring-1 ring-borde transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                     >
                       <Trash2 className="h-4 w-4" strokeWidth={1.8} />
                       {borrando ? "Borrando…" : "Borrar"}
@@ -398,7 +600,7 @@ function Conversaciones() {
                           <div key={m.id ?? i} className={`flex ${mio || bot ? "justify-end" : "justify-start"}`}>
                             <div className="max-w-[78%]">
                               <div
-                                className={`rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
+                                className={`break-words rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed ${
                                   fallido
                                     ? "rounded-br-md bg-red-50 text-red-700 ring-1 ring-inset ring-red-200"
                                     : mio
