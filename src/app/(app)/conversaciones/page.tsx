@@ -64,6 +64,7 @@ function Conversaciones() {
   const telDeLaBandeja = params.get("tel");
 
   const [convs, setConvs] = useState<Conversacion[] | null>(null);
+  const [cargandoLista, setCargandoLista] = useState(false);
   const [activa, setActiva] = useState<string | null>(telDeLaBandeja);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [estado, setEstado] = useState<EstadoConversacion | null>(null);
@@ -85,24 +86,47 @@ function Conversaciones() {
   const [enVivo, setEnVivo] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLen = useRef(0);
+  // Si la dueña pulsa dos filtros seguidos, la petición lenta del primero no puede volver
+  // después y pintar una lista que ya no corresponde al botón seleccionado.
+  const ultimaSolicitudLista = useRef(0);
 
-  const cargar = useCallback(() => {
-    getConversaciones({ q: busquedaAplicada, filtro })
-      .then((c) => { setConvs(c); setError(""); })
-      .catch((e) => { setError((e as Error).message); });
-    // Cuántos chats tienes tomados. La pausa NO caduca sola (así lo decidiste): sin este
-    // aviso, un "ya te escribo" desde el celular deja el bot mudo en ese chat para siempre.
-    getResumenChats().then(setResumen).catch(() => { /* el aviso es secundario */ });
+  const cargar = useCallback(async (mostrarCarga = false) => {
+    const solicitud = ++ultimaSolicitudLista.current;
+    if (mostrarCarga) setCargandoLista(true);
+    const [conversaciones, resumenActual] = await Promise.allSettled([
+      getConversaciones({ q: busquedaAplicada, filtro }),
+      getResumenChats(),
+    ]);
+    // Ignora el resultado viejo: la persona ya eligió otro filtro o escribió otra búsqueda.
+    if (solicitud !== ultimaSolicitudLista.current) return;
+
+    if (conversaciones.status === "fulfilled") {
+      setConvs(conversaciones.value);
+      setError("");
+    } else {
+      setError((conversaciones.reason as Error).message);
+    }
+    // El resumen es una ayuda visual; que falle no impide ver los chats.
+    if (resumenActual.status === "fulfilled") setResumen(resumenActual.value);
+    // Una actualización silenciosa puede adelantar a una visible; al terminar la más nueva
+    // siempre quitamos el estado de espera para que la lista no quede con el indicador girando.
+    setCargandoLista(false);
   }, [busquedaAplicada, filtro]);
 
   useEffect(() => {
-    cargar();
-  }, [busqueda]);
+    void cargar(true);
+  }, [cargar]);
 
   useEffect(() => {
     const id = window.setTimeout(() => setBusquedaAplicada(busqueda.trim()), 250);
     return () => window.clearTimeout(id);
-  }, [cargar]);
+  }, [busqueda]);
+
+  function cambiarFiltro(siguiente: FiltroConversaciones) {
+    if (siguiente !== filtro) setCargandoLista(true);
+    setFiltro(siguiente);
+    cerrarSeleccion();
+  }
 
   // El hilo + si PUEDES escribirle ahora mismo (van juntos: sin lo segundo, la caja de texto
   // mentiría — te dejaría escribir un mensaje que WhatsApp va a rechazar).
@@ -182,7 +206,7 @@ function Conversaciones() {
     setErrorEnvio("");
     setErrorHilo("");
     prevLen.current = 0;
-    void marcarLeido(telefono).then(cargar).catch(() => { /* no es crítico */ });
+    void marcarLeido(telefono).then(() => cargar()).catch(() => { /* no es crítico */ });
   }
 
   const convActiva = convs?.find((c) => c.telefono === activa) ?? null;
@@ -345,7 +369,7 @@ function Conversaciones() {
             atendidos por ti. Alejandra permanece en silencio únicamente en esos chats.
           </span>
           <button
-            onClick={() => setFiltro("mios")}
+            onClick={() => cambiarFiltro("mios")}
             className="focus-ring shrink-0 rounded-lg bg-bg px-3 py-1.5 font-semibold text-warn ring-1 ring-inset ring-warn-border transition hover:bg-bg-subtle"
           >
             Ver y organizar
@@ -395,10 +419,7 @@ function Conversaciones() {
                 {FILTROS.map((f) => (
                   <button
                     key={f.id}
-                    onClick={() => {
-                      setFiltro(f.id);
-                      cerrarSeleccion();
-                    }}
+                    onClick={() => cambiarFiltro(f.id)}
                     className={`focus-ring shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-semibold transition ${
                       filtro === f.id
                         ? "bg-accent text-accent-fg"
@@ -434,15 +455,19 @@ function Conversaciones() {
                 </button>
               ) : null}
             </div>
-            <ul className="min-h-0 flex-1 divide-y divide-borde/60 overflow-y-auto">
-              {convs.length === 0 && (
+            <ul className="min-h-0 flex-1 divide-y divide-borde/60 overflow-y-auto" aria-busy={cargandoLista}>
+              {cargandoLista ? (
+                <li className="px-5 py-10 text-center" aria-live="polite">
+                  <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-borde border-t-accent" />
+                  <p className="mt-3 text-sm font-semibold text-fg">Actualizando conversaciones…</p>
+                </li>
+              ) : convs.length === 0 ? (
                 <li className="px-5 py-10 text-center">
                   <MessageCircle className="mx-auto h-6 w-6 text-fg-muted" strokeWidth={1.7} />
                   <p className="mt-2 text-sm font-semibold text-fg">No encontramos conversaciones</p>
                   <p className="mt-1 text-[12px] font-medium text-fg-muted">Prueba otro nombre, teléfono o filtro.</p>
                 </li>
-              )}
-              {convs.map((c) => {
+              ) : convs.map((c) => {
                 const seleccionada = activa === c.telefono;
                 const elegible = c.bot_pausado && c.pausado_por !== "bot" && !c.privado;
                 return (
@@ -706,7 +731,9 @@ function Conversaciones() {
                   <MessageCircle className="h-5 w-5" strokeWidth={1.8} />
                 </div>
                 <p className="text-sm font-semibold text-fg">Elige una conversación</p>
-                <p className="mt-1 text-sm font-medium text-fg-muted">Selecciónala en la lista para verla.</p>
+                <p className="mt-1 text-sm font-medium text-fg-muted">
+                  El filtro muestra los chats que Alejandra puede atender. Selecciona uno para ver el chat.
+                </p>
               </div>
             )}
           </div>
