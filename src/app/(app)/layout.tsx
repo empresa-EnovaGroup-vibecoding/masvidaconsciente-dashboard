@@ -6,30 +6,50 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutGrid, BellRing, BarChart3, ShoppingBag, Wallet, Coins, CalendarDays, BookOpen, Users, MessageCircle, Bot, Lightbulb, MessageSquare, Settings, LogOut, Menu, X, Truck } from "lucide-react";
 import { clearToken, isLoggedIn, getPagos, getIntervenciones, getConfiguracion, type ConfiguracionNegocio } from "@/lib/api";
 
-const NAV = [
-  { href: "/dashboard", label: "Resumen", icon: LayoutGrid },
-  { href: "/bandeja", label: "El bot te necesita", icon: BellRing },
-  { href: "/reporte", label: "Reporte", icon: BarChart3 },
-  { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
-  { href: "/pagos", label: "Pagos", icon: Wallet },
-  { href: "/tasa", label: "Tasa", icon: Coins },
-  { href: "/horario", label: "Horario", icon: CalendarDays },
-  { href: "/catalogo", label: "Catálogo", icon: BookOpen },
-  // El envío es DINERO: vive aquí (casillas con número que el código OBEDECE), no en
-  // Conocimiento (un texto que el bot lee y cuenta como quiere). Ver 2026-07-14.
-  // ⚠️ Se llama "Zonas de envío", NO "Entregas": aquí no hay ninguna entrega del día. La dueña
-  // que buscaba "qué tengo que entregar hoy" hacía clic en el camión y se encontraba una tabla
-  // de tarifas de delivery; lo que buscaba estaba en Pedidos. Esto es el ABM de a dónde llevas
-  // y cuánto cobras por llevarlo: configuración, hermana de Horario y Catálogo, que es justo
-  // donde ya está colocada. El `href` se deja intacto a propósito — renombrar la carpeta rompe
-  // marcadores guardados y no arregla nada: la URL no la lee nadie, la etiqueta sí.
-  { href: "/entregas", label: "Zonas de envío", icon: Truck },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
-  { href: "/bot", label: "Mi Bot", icon: Bot },
-  { href: "/conocimiento", label: "Conocimiento", icon: Lightbulb },
-  { href: "/mensajes", label: "Mensajes", icon: MessageSquare },
-  { href: "/configuracion", label: "Configuración", icon: Settings },
+type Destino = { href: string; label: string; icon: typeof LayoutGrid };
+
+// El menú sigue el trabajo de la dueña, no el orden en que se programaron las pantallas.
+// Ver primero lo urgente, luego vender, organizar el negocio y, por último, ajustar a Alejandra.
+const INICIO: Destino = { href: "/dashboard", label: "Resumen de hoy", icon: LayoutGrid };
+const SECCIONES_NAVEGACION: { titulo: string; destinos: Destino[] }[] = [
+  {
+    titulo: "Atender clientes",
+    destinos: [
+      { href: "/bandeja", label: "El bot te necesita", icon: BellRing },
+      { href: "/conversaciones", label: "Conversaciones", icon: MessageCircle },
+    ],
+  },
+  {
+    titulo: "Ventas",
+    destinos: [
+      { href: "/pedidos", label: "Pedidos", icon: ShoppingBag },
+      { href: "/pagos", label: "Pagos", icon: Wallet },
+      { href: "/tasa", label: "Tasa del dólar", icon: Coins },
+      { href: "/reporte", label: "Reporte", icon: BarChart3 },
+    ],
+  },
+  {
+    titulo: "Organizar mi negocio",
+    destinos: [
+      { href: "/clientes", label: "Clientes", icon: Users },
+      { href: "/catalogo", label: "Catálogo", icon: BookOpen },
+      { href: "/horario", label: "Horario", icon: CalendarDays },
+      // Aquí se configuran zonas y tarifas, no las entregas del día (esas viven en Pedidos).
+      { href: "/entregas", label: "Zonas de envío", icon: Truck },
+    ],
+  },
+  {
+    titulo: "Alejandra",
+    destinos: [
+      { href: "/bot", label: "Probar a Alejandra", icon: Bot },
+      { href: "/conocimiento", label: "Lo que sabe", icon: Lightbulb },
+      { href: "/mensajes", label: "Mensajes automáticos", icon: MessageSquare },
+    ],
+  },
+  {
+    titulo: "Ajustes",
+    destinos: [{ href: "/configuracion", label: "Configuración", icon: Settings }],
+  },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -82,6 +102,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const ubicacion = config?.negocio_ubicacion?.trim() || "Panel";
   const inicial = negocio.charAt(0).toUpperCase();
 
+  function enlace({ href, label, icon: Icon }: Destino) {
+    const activo = pathname === href;
+    return (
+      <Link
+        key={href}
+        href={href}
+        onClick={() => setMenuAbierto(false)}
+        aria-current={activo ? "page" : undefined}
+        className={`focus-ring flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+          activo
+            ? "bg-accent/10 text-accent font-semibold"
+            : "text-fg-muted font-medium hover:bg-bg-subtle hover:text-fg"
+        }`}
+      >
+        <Icon className="h-[18px] w-[18px]" strokeWidth={activo ? 2 : 1.8} />
+        <span className="flex-1">{label}</span>
+        {href === "/pagos" && pendientes > 0 && (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">
+            {pendientes}
+          </span>
+        )}
+        {href === "/bandeja" && avisos > 0 && (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-50 px-1.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/15 tnum">
+            {avisos}
+          </span>
+        )}
+        {activo && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
+      </Link>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Fondo oscuro detrás del menú en celular */}
@@ -115,37 +166,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <nav aria-label="Navegación principal" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const activo = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMenuAbierto(false)}
-                aria-current={activo ? "page" : undefined}
-                className={`focus-ring flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                  activo
-                    ? "bg-accent/10 text-accent font-semibold"
-                    : "text-fg-muted font-medium hover:bg-bg-subtle hover:text-fg"
-                }`}
-              >
-                <Icon className="h-[18px] w-[18px]" strokeWidth={activo ? 2 : 1.8} />
-                <span className="flex-1">{label}</span>
-                {label === "Pagos" && pendientes > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-warn-bg px-1.5 text-[11px] font-semibold text-warn ring-1 ring-warn-border tnum">
-                    {pendientes}
-                  </span>
-                )}
-                {label === "El bot te necesita" && avisos > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-50 px-1.5 text-[11px] font-semibold text-red-700 ring-1 ring-red-600/15 tnum">
-                    {avisos}
-                  </span>
-                )}
-                {activo && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
-              </Link>
-            );
-          })}
+        <nav aria-label="Navegación principal" className="flex-1 overflow-y-auto px-3 py-2">
+          {enlace(INICIO)}
+          {SECCIONES_NAVEGACION.map(({ titulo, destinos }) => (
+            <section key={titulo} className="mt-4" aria-labelledby={`nav-${titulo.replaceAll(" ", "-")}`}>
+              <h2 id={`nav-${titulo.replaceAll(" ", "-")}`} className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-fg-muted">
+                {titulo}
+              </h2>
+              <div className="space-y-0.5">{destinos.map(enlace)}</div>
+            </section>
+          ))}
         </nav>
 
         <div className="border-t border-borde/70 p-3">
