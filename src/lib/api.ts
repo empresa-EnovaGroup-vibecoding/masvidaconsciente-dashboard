@@ -416,6 +416,9 @@ export interface ClienteDetalle {
 }
 
 export interface Conocimiento {
+  tema_confirmado?: string | null;
+  producto_id?: number | null;
+  confirmado?: boolean;
   id: number;
   categoria: string | null;
   titulo: string;
@@ -886,7 +889,7 @@ export const anularPago = (id: number) => request(`/api/pagos/${id}/anular`, { m
 export const getIntervenciones = (estado: EstadoIntervencion = "pendiente") =>
   request<Intervencion[]>(`/api/intervenciones?estado=${estado}`);
 /** La dueña ya atendió el chat: cierra el aviso y (por defecto) reactiva el bot. */
-export const resolverIntervencion = (id: number, reactivar = true) =>
+export const resolverIntervencion = (id: number, reactivar = false) =>
   request<{ ok: boolean; bot_reactivado: boolean }>(
     `/api/intervenciones/${id}/resolver?reactivar=${reactivar}`,
     { method: "POST" },

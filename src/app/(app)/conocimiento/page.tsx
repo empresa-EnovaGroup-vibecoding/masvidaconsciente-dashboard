@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Lightbulb, Power } from "lucide-react";
 import {
   getConocimiento,
+  getProductos,
   crearConocimiento,
   editarConocimiento,
   borrarConocimiento,
@@ -30,10 +31,16 @@ const CATEGORIAS = [
 ];
 const LABEL: Record<string, string> = Object.fromEntries(CATEGORIAS.map((c) => [c.key, c.label]));
 
-type FormState = { id?: number; categoria: string; titulo: string; contenido: string };
-const FORM_VACIO: FormState = { categoria: "faq", titulo: "", contenido: "" };
+type FormState = { id?: number; categoria: string; titulo: string; contenido: string;
+  tema_confirmado: string; producto_id: number | null; confirmado: boolean };
+const FORM_VACIO: FormState = { categoria: "faq", titulo: "", contenido: "",
+  tema_confirmado: "", producto_id: null, confirmado: false };
+const TEMAS = { ingredientes: "Ingredientes", alergenos: "Alérgenos", conservacion: "Conservación",
+  envio_nacional: "Envíos nacionales", politica: "Otra política del negocio" };
 
 export default function ConocimientoPage() {
+  const [productos, setProductos] = useState<{ id: number; nombre: string }[]>([]);
+  useEffect(() => { getProductos().then(setProductos).catch((e) => setError(e.message)); }, []);
   const [items, setItems] = useState<Conocimiento[] | null>(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState<FormState | null>(null);
@@ -78,6 +85,9 @@ export default function ConocimientoPage() {
       categoria: form.categoria,
       titulo: form.titulo.trim(),
       contenido: form.contenido.trim(),
+      tema_confirmado: form.tema_confirmado || null,
+      producto_id: form.producto_id,
+      confirmado: form.confirmado,
     };
     try {
       if (form.id) await editarConocimiento(form.id, datos);
@@ -124,7 +134,7 @@ export default function ConocimientoPage() {
         <div>
           <h1 className="text-[28px] font-extrabold leading-tight num-tight text-fg">Conocimiento del negocio</h1>
           <p className="mt-1 text-[15px] font-medium text-fg-muted">
-            Lo que el bot usa para responder dudas. Mientras más cargues aquí, menos improvisa.
+            Revisa el tema y confirma cada respuesta para que Alejandra pueda usarla.
           </p>
         </div>
         <button
@@ -177,6 +187,7 @@ export default function ConocimientoPage() {
                       </div>
                       <div className="min-w-0 leading-tight">
                         <p className="font-bold text-fg">{i.titulo}</p>
+                        <p className="text-xs text-fg-muted">{i.confirmado ? "Respuesta confirmada" : "Pendiente de revisión: Alejandra consultará contigo"}</p>
                         <p className="mt-1 whitespace-pre-wrap text-[13px] font-medium leading-relaxed text-fg-muted">
                           {i.contenido}
                         </p>
@@ -196,7 +207,7 @@ export default function ConocimientoPage() {
                         title={i.activo === false ? "El bot NO la usa. Clic para reactivarla." : "El bot la usa. Clic para retirarla sin borrarla."}
                       >
                         <Power className="h-3.5 w-3.5" strokeWidth={2} />
-                        {i.activo === false ? "Retirada" : "El bot la usa"}
+                        {i.activo === false ? "Retirada" : i.confirmado ? "El bot la usa" : "Guardada"}
                       </button>
                       <button
                         onClick={() =>
@@ -205,6 +216,9 @@ export default function ConocimientoPage() {
                             categoria: i.categoria || "faq",
                             titulo: i.titulo,
                             contenido: i.contenido,
+                            tema_confirmado: i.tema_confirmado || "",
+                            producto_id: i.producto_id ?? null,
+                            confirmado: i.confirmado === true,
                           })
                         }
                         className="focus-ring rounded-lg p-1.5 text-fg-muted transition hover:bg-bg-subtle hover:text-fg"
@@ -255,6 +269,27 @@ export default function ConocimientoPage() {
             </div>
 
             <div className="space-y-3.5">
+              <div>
+                <label htmlFor="tema-confirmado" className="mb-1 block text-sm">De qué trata esta respuesta</label>
+                <select id="tema-confirmado" className={inputCls} value={form.tema_confirmado}
+                  onChange={(e) => setForm({ ...form, tema_confirmado: e.target.value, confirmado: false })}>
+                  <option value="">Elige el tema</option>
+                  {Object.entries(TEMAS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="producto-confirmado" className="mb-1 block text-sm">A qué producto corresponde</label>
+                <select id="producto-confirmado" className={inputCls} value={form.producto_id ?? ""}
+                  onChange={(e) => setForm({ ...form, producto_id: e.target.value ? Number(e.target.value) : null, confirmado: false })}>
+                  <option value="">Al negocio en general</option>
+                  {productos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.confirmado} disabled={!form.tema_confirmado}
+                  onChange={(e) => setForm({ ...form, confirmado: e.target.checked })} />
+                Revisé esta respuesta y autorizo que Alejandra la use.
+              </label>
               <div>
                 <label
                   htmlFor="conocimiento-categoria"
