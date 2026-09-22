@@ -294,11 +294,11 @@ export default function BandejaPage() {
                       className="focus-ring flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
                     >
                       <Check className="h-4 w-4" strokeWidth={2} />
-                      {enviando === a.id ? "Guardando…" : "Ya lo atendí"}
+                      {enviando === a.id ? "Guardando…" : "Atendido, sigo yo"}
                     </button>
                     <button onClick={() => resolver(a.id, true)} disabled={enviando === a.id}
                       className="focus-ring rounded-xl px-3.5 py-2 text-[13px] font-semibold ring-1 ring-borde">
-                      Atendido y devolver al bot
+                      Atendido, devolver al bot
                     </button>
                   </div>
                   <p className="mt-2.5 text-[12px] font-medium text-fg-faint">
