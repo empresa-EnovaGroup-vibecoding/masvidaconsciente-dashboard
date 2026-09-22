@@ -416,6 +416,9 @@ export interface ClienteDetalle {
 }
 
 export interface Conocimiento {
+  tema_confirmado?: string | null;
+  producto_id?: number | null;
+  confirmado?: boolean;
   id: number;
   categoria: string | null;
   titulo: string;
@@ -431,16 +434,40 @@ export interface Conocimiento {
 export type ConocimientoInput = Omit<Conocimiento, "id" | "activo">;
 
 /** Un aviso de "el bot te necesita": el bot se calló en ese chat y te espera. */
+/** 🗂️ Lo que el extractor del expediente leyó en un mensaje de la dueña (texto o nota de voz) y
+ * PROPONE. Viaja en `intervenciones.propuesta` (JSONB). Solo lo que la pantalla necesita mostrar:
+ * el detalle humano ya viene redactado en `Intervencion.detalle`. `resultado` se llena al decidir. */
+export interface PropuestaExpediente {
+  tipo:
+    | "pedido_tomado"
+    | "pago_confirmado"
+    | "entrega_acordada"
+    | "precio_especial"
+    | "cancelado"
+    | "respuesta_general"
+    | "nada";
+  pedido_id?: number | null;
+  total?: number | null;
+  monto?: number | null;
+  moneda?: string;
+  fecha?: string | null;
+  franja?: string;
+  lugar?: string;
+  resultado?: "" | "aplicada" | "descartada";
+}
+
 export interface Intervencion {
   id: number;
   cliente: string; // teléfono
   nombre: string | null;
-  motivo: string; // precio_del_dia | no_se | pide_persona | reclamo
+  motivo: string; // precio_del_dia | no_se | pide_persona | reclamo | chat_tomado | propuesta_expediente…
   motivo_texto: string; // ya viene legible desde el bot
   detalle: string | null;
   mensaje_cliente: string | null;
   estado: string; // pendiente | resuelta
   fecha: string;
+  /** Solo cuando `motivo === "propuesta_expediente"`: la pregunta con dos botones. */
+  propuesta?: PropuestaExpediente | null;
 }
 
 export type EstadoIntervencion = "pendiente" | "resuelta";
@@ -886,11 +913,23 @@ export const anularPago = (id: number) => request(`/api/pagos/${id}/anular`, { m
 export const getIntervenciones = (estado: EstadoIntervencion = "pendiente") =>
   request<Intervencion[]>(`/api/intervenciones?estado=${estado}`);
 /** La dueña ya atendió el chat: cierra el aviso y (por defecto) reactiva el bot. */
-export const resolverIntervencion = (id: number, reactivar = true) =>
+export const resolverIntervencion = (id: number, reactivar = false) =>
   request<{ ok: boolean; bot_reactivado: boolean }>(
     `/api/intervenciones/${id}/resolver?reactivar=${reactivar}`,
     { method: "POST" },
   );
+/** 🗂️ "Sí, es correcto": la propuesta del expediente pasa a ser dato (pedido, pago confirmado,
+ * entrega…) por la única puerta de escritura del bot. No despausa ni retoma nada. */
+export const aplicarPropuesta = (id: number) =>
+  request<{ ok: boolean; tipo: string; pedido_id?: number; pago_id?: number }>(
+    `/api/intervenciones/${id}/aplicar`,
+    { method: "POST" },
+  );
+/** 🗂️ "No": se cierra sin escribir nada; queda firmado quién la descartó. */
+export const descartarPropuesta = (id: number) =>
+  request<{ ok: boolean; resultado: string }>(`/api/intervenciones/${id}/descartar`, {
+    method: "POST",
+  });
 export const getPreciosDia = () => request<PrecioDiaProducto[]>("/api/precio-dia");
 /** El precio vale SOLO por hoy: mañana el bot lo vuelve a preguntar. */
 export const guardarPrecioDia = (variante_id: number, precio: number, nota?: string | null) =>

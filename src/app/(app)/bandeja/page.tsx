@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { BellRing, Check, MessageCircle, Quote, Tag } from "lucide-react";
+import { BellRing, Check, MessageCircle, Quote, Tag, X } from "lucide-react";
 import {
   getIntervenciones,
   resolverIntervencion,
+  aplicarPropuesta,
+  descartarPropuesta,
   getPreciosDia,
   guardarPrecioDia,
   type Intervencion,
@@ -165,14 +167,31 @@ export default function BandejaPage() {
 
   useEffect(cargar, [cargar]);
 
-  async function resolver(id: number) {
+  async function resolver(id: number, reactivar = false) {
     setError("");
     setEnviando(id);
     try {
-      await resolverIntervencion(id, true);
+      await resolverIntervencion(id, reactivar);
       cargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cerrar el aviso");
+    } finally {
+      setEnviando(null);
+    }
+  }
+
+  /** 🗂️ La propuesta del expediente: "Sí, es correcto" la vuelve dato; "No" la cierra sin
+   * escribir nada. Ninguna de las dos toca la pausa del chat. Si el bot no puede aplicarla
+   * (p. ej. el pedido ya está pagado), lo dice aquí arriba y la propuesta sigue pendiente. */
+  async function decidirPropuesta(id: number, correcta: boolean) {
+    setError("");
+    setEnviando(id);
+    try {
+      if (correcta) await aplicarPropuesta(id);
+      else await descartarPropuesta(id);
+      cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo registrar tu respuesta");
     } finally {
       setEnviando(null);
     }
@@ -250,7 +269,13 @@ export default function BandejaPage() {
                 <span
                   className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${estiloMotivo(a.motivo)}`}
                 >
-                  {a.motivo_texto}
+                  {a.motivo === "propuesta_expediente"
+                    ? a.estado === "pendiente"
+                      ? "Por confirmar"
+                      : a.propuesta?.resultado === "aplicada"
+                        ? "Confirmada"
+                        : "Descartada"
+                    : a.motivo_texto}
                 </span>
               </div>
 
@@ -267,7 +292,49 @@ export default function BandejaPage() {
                 </div>
               )}
 
-              {a.estado === "pendiente" ? (
+              {a.motivo === "propuesta_expediente" ? (
+                a.estado === "pendiente" ? (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => decidirPropuesta(a.id, true)}
+                        disabled={enviando === a.id}
+                        className="focus-ring flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
+                      >
+                        <Check className="h-4 w-4" strokeWidth={2} />
+                        {enviando === a.id ? "Guardando…" : "Sí, es correcto"}
+                      </button>
+                      <button
+                        onClick={() => decidirPropuesta(a.id, false)}
+                        disabled={enviando === a.id}
+                        className="focus-ring flex items-center gap-1.5 rounded-xl bg-bg px-3.5 py-2 text-[13px] font-semibold text-fg ring-1 ring-borde transition hover:bg-bg-subtle disabled:opacity-50"
+                      >
+                        <X className="h-4 w-4" strokeWidth={2} />
+                        No
+                      </button>
+                      {linkChat(a.cliente) && (
+                        <Link
+                          href={linkChat(a.cliente)!}
+                          className="focus-ring flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold text-fg-muted transition hover:bg-bg-subtle"
+                        >
+                          <MessageCircle className="h-4 w-4" strokeWidth={2} />
+                          Ver el chat
+                        </Link>
+                      )}
+                    </div>
+                    <p className="mt-2.5 text-[12px] font-medium text-fg-faint">
+                      Alejandra leyó esto en un mensaje de Whuilianny. Si es correcto, queda anotado
+                      en la venta con su firma; si no, no se guarda nada. El chat no cambia de manos.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-[12px] font-medium text-fg-muted">
+                    {a.propuesta?.resultado === "aplicada"
+                      ? "Confirmada: quedó anotada en la venta."
+                      : "Descartada: no se guardó nada."}
+                  </p>
+                )
+              ) : a.estado === "pendiente" ? (
                 <>
                   {a.motivo === "precio_del_dia" && precios.length > 0 && (
                     <p className="mb-3 text-[12px] font-medium text-fg-muted">
@@ -294,16 +361,20 @@ export default function BandejaPage() {
                       className="focus-ring flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-[13px] font-semibold text-accent-fg transition hover:bg-accent-soft disabled:opacity-50"
                     >
                       <Check className="h-4 w-4" strokeWidth={2} />
-                      {enviando === a.id ? "Reactivando…" : "Ya lo atendí (reactivar el bot)"}
+                      {enviando === a.id ? "Guardando…" : "Atendido, sigo yo"}
+                    </button>
+                    <button onClick={() => resolver(a.id, true)} disabled={enviando === a.id}
+                      className="focus-ring rounded-xl px-3.5 py-2 text-[13px] font-semibold ring-1 ring-borde">
+                      Atendido, devolver al bot
                     </button>
                   </div>
                   <p className="mt-2.5 text-[12px] font-medium text-fg-faint">
-                    Mientras este aviso siga abierto, el bot no le responde a este cliente.
+                    Alejandra espera. Puedes cerrar el aviso y seguir atendiendo tú, o devolverle el chat.
                   </p>
                 </>
               ) : (
                 <p className="text-[12px] font-medium text-fg-muted">
-                  Ya lo atendiste. El bot volvió a responderle a este cliente.
+                  Aviso atendido. Puedes revisar quién atiende el chat en Conversaciones.
                 </p>
               )}
             </article>
