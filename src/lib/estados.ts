@@ -59,6 +59,8 @@ const MAPA_MOTIVO: Record<string, string> = {
   no_se: "bg-blue-50 text-blue-700 ring-blue-600/15",
   pide_persona: "bg-indigo-50 text-indigo-700 ring-indigo-600/15",
   reclamo: "bg-red-50 text-red-700 ring-red-600/15",
+  // 🗂️ Una PROPUESTA del expediente no es una alarma: es una pregunta ("¿es correcto?").
+  propuesta_expediente: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
 };
 
 export function estiloMotivo(motivo: string): string {
