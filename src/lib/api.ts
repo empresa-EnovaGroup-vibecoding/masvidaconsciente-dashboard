@@ -140,6 +140,12 @@ export interface Pedido {
   fecha: string;
   // Pago que impide editar/eliminar: 'confirmado' | 'parcial' | 'reportado' | null.
   pago_bloqueante?: string | null;
+  // 🗂️ EL EXPEDIENTE (migración 040, PR4): quién puso el pedido — 'bot' (las herramientas del bot),
+  // 'dueña' (Whuilianny lo tomó a mano en el chat y alguien lo confirmó en la Bandeja) o 'panel'.
+  // `confianza` (0–1) es con cuánta seguridad lo leyó el extractor. Opcionales: los pedidos viejos
+  // vienen como 'bot' y sin confianza.
+  origen?: "bot" | "dueña" | "panel" | string | null;
+  confianza?: number | null;
 }
 
 /** Un TAMAÑO de un producto: es lo que se COBRA (Kombucha 350ml $4 · 700ml $7). */
