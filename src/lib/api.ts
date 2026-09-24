@@ -343,6 +343,10 @@ export interface ConfiguracionNegocio {
   agente_modo?: string | null;
   modelo_operador?: string | null;
   modelo_voz?: string | null;
+  // 🔓 RETORNO AUTOMÁTICO (SESIONES (39)): horas SIN respuesta de Whuilianny tras las que el bot
+  // retoma solo un chat que ella pausó al escribir. "0" o vacío = nunca (el default). Se guarda
+  // como texto (admite decimales). Palanca de la PROVEEDORA.
+  retomar_auto_horas?: string | null;
 }
 
 /** Un día suelto en que el negocio NO entrega (viaje, feriado, vacaciones). */

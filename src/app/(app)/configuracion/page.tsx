@@ -50,6 +50,7 @@ const VACIO: ConfiguracionNegocio = {
   agente_modo: "",
   modelo_operador: "",
   modelo_voz: "",
+  retomar_auto_horas: "",
 };
 
 // Modelos que puede usar el bot para conversar. El slug es el identificador de
@@ -157,6 +158,7 @@ const CLAVES_PROVEEDORA: (keyof ConfiguracionNegocio)[] = [
   "agente_modo",
   "modelo_operador",
   "modelo_voz",
+  "retomar_auto_horas",
 ];
 
 export default function ConfiguracionPage() {
@@ -484,6 +486,31 @@ export default function ConfiguracionPage() {
                   </p>
                 </>
               )}
+            </Seccion>
+          )}
+
+          {/* ── EL BOT RETOMA SOLO (SESIONES (39)) — solo Enova ── */}
+          {esProveedora && (
+            <Seccion
+              titulo="El bot retoma solo · solo Enova"
+              nota="Cuando Whuilianny escribe en un chat, el bot se calla ahí (eso no cambia). Con esto, si pasan estas horas sin que ella conteste, el cliente vuelve a escribir y no hay nada pendiente de confirmar en la Bandeja, el bot retoma la conversación por su cuenta — sabiendo lo que ella ya vendió. Si ella vuelve a escribir, se calla otra vez al instante. En 0 nunca retoma solo (el chat espera a que lo devuelvas a mano)."
+            >
+              <Campo label="Horas sin respuesta de Whuilianny para que el bot retome solo (0 = nunca)">
+                <input
+                  className={inputCls}
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  inputMode="decimal"
+                  value={datos.retomar_auto_horas ?? ""}
+                  onChange={(e) => set("retomar_auto_horas", e.target.value)}
+                  placeholder="0"
+                />
+              </Campo>
+              <p className="text-[12px] font-medium leading-relaxed text-fg-muted">
+                Un pago SIEMPRE lo confirmas tú, aunque el bot retome. Y si el bot te pidió ayuda en un
+                chat, ese no se reactiva solo: ese lo devuelves tú con el botón.
+              </p>
             </Seccion>
           )}
 
