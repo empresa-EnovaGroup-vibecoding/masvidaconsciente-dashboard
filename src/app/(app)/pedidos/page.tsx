@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShoppingBag, Trash2, MessageCircle, User, Pencil, Plus, X, Check, CalendarClock } from "lucide-react";
+import { ShoppingBag, Trash2, MessageCircle, User, Pencil, Plus, X, Check, CalendarClock, Hand } from "lucide-react";
 import {
   getPedidos,
   cambiarEstadoPedido,
@@ -311,8 +311,26 @@ export default function PedidosPage() {
                     </div>
                     <div>
                       <p className="font-bold text-fg">{p.nombre || p.cliente}</p>
-                      <p className="text-xs font-medium text-fg-muted tnum">
-                        {p.nombre ? `${p.cliente} · ` : ""}Pedido #{p.id}
+                      <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-fg-muted tnum">
+                        <span>
+                          {p.nombre ? `${p.cliente} · ` : ""}Pedido #{p.id}
+                        </span>
+                        {p.origen === "dueña" && (
+                          // 🗂️ El expediente (PR4): este pedido NO lo armó el bot — Whuilianny lo tomó a
+                          // mano en el chat y una persona lo confirmó en la Bandeja. Verlo aquí es lo que
+                          // permite cuadrar "lo que ella vendió" con "lo que el bot sabe".
+                          <span
+                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-600/15"
+                            title={
+                              p.confianza != null
+                                ? `Leído del chat por el extractor con confianza ${Math.round(p.confianza * 100)}%`
+                                : "Leído del chat y confirmado en la Bandeja"
+                            }
+                          >
+                            <Hand className="h-3 w-3" strokeWidth={2} />
+                            Tomado por Whuilianny
+                          </span>
+                        )}
                       </p>
                       <div className="mt-1 flex items-center gap-3 text-xs font-semibold">
                         <a
