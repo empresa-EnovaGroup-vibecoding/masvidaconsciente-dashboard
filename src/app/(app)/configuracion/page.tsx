@@ -51,6 +51,7 @@ const VACIO: ConfiguracionNegocio = {
   modelo_operador: "",
   modelo_voz: "",
   retomar_auto_horas: "",
+  expediente_escritura: "",
 };
 
 // Modelos que puede usar el bot para conversar. El slug es el identificador de
@@ -159,6 +160,7 @@ const CLAVES_PROVEEDORA: (keyof ConfiguracionNegocio)[] = [
   "modelo_operador",
   "modelo_voz",
   "retomar_auto_horas",
+  "expediente_escritura",
 ];
 
 export default function ConfiguracionPage() {
@@ -510,6 +512,30 @@ export default function ConfiguracionPage() {
               <p className="text-[12px] font-medium leading-relaxed text-fg-muted">
                 Un pago SIEMPRE lo confirmas tú, aunque el bot retome. Y si el bot te pidió ayuda en un
                 chat, ese no se reactiva solo: ese lo devuelves tú con el botón.
+              </p>
+            </Seccion>
+          )}
+
+          {/* ── EL EXPEDIENTE: qué hace con lo que Whuilianny dice a mano (SESIONES (41)) — solo Enova ── */}
+          {esProveedora && (
+            <Seccion
+              titulo="Lo que Whuilianny le dice al cliente · solo Enova"
+              nota="El bot lee lo que ella le escribe o le dice por nota de voz a un cliente (le tomó el pedido, le acordó la entrega, le confirmó el pago). Aquí decides si lo anota solo o si te lo pregunta primero. Un pago NUNCA se anota solo: siempre se pregunta."
+            >
+              <Campo label="Con lo que ella dice claro">
+                <select
+                  className={inputCls}
+                  value={datos.expediente_escritura || "auto"}
+                  onChange={(e) => set("expediente_escritura", e.target.value)}
+                >
+                  <option value="auto">Lo anota solo; solo lo dudoso me lo pregunta (recomendado)</option>
+                  <option value="propuestas">Todo me lo pregunta antes de anotarlo</option>
+                  <option value="off">Apagado: no lee lo que ella dice</option>
+                </select>
+              </Campo>
+              <p className="text-[12px] font-medium leading-relaxed text-fg-muted">
+                Si una pregunta queda sin responder en la Bandeja, el bot no la da por hecha ni la
+                contradice: si el cliente pregunta justo por eso, dice que lo confirma y avisa.
               </p>
             </Seccion>
           )}
