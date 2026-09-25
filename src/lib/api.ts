@@ -347,6 +347,11 @@ export interface ConfiguracionNegocio {
   // retoma solo un chat que ella pausó al escribir. "0" o vacío = nunca (el default). Se guarda
   // como texto (admite decimales). Palanca de la PROVEEDORA.
   retomar_auto_horas?: string | null;
+  // 🗂️ EL EXPEDIENTE: qué hace el bot con lo que Whuilianny le dice a mano a un cliente.
+  // "auto" (default desde el 24-sep): lo claro (pedido, entrega) se anota solo; pagos y lo dudoso
+  // quedan como pregunta en la Bandeja · "propuestas": TODO se pregunta · "off": no lee.
+  // Palanca de la PROVEEDORA.
+  expediente_escritura?: string | null;
 }
 
 /** Un día suelto en que el negocio NO entrega (viaje, feriado, vacaciones). */
