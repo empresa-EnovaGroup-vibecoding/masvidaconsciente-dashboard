@@ -469,6 +469,10 @@ export interface PropuestaExpediente {
   franja?: string;
   lugar?: string;
   resultado?: "" | "aplicada" | "descartada";
+  /** 💰 PR6b: solo en `pago_confirmado`. El bot le preguntó a Whuilianny por WhatsApp a su celular
+   * (`preguntada_at`, ISO) y guardó el id del mensaje para casar su respuesta citada. */
+  pregunta_wamid?: string | null;
+  preguntada_at?: string | null;
 }
 
 export interface Intervencion {
@@ -483,6 +487,8 @@ export interface Intervencion {
   fecha: string;
   /** Solo cuando `motivo === "propuesta_expediente"`: la pregunta con dos botones. */
   propuesta?: PropuestaExpediente | null;
+  /** Quién la resolvió: el email del panel, "extractor" (modo auto) o "whuilianny (WhatsApp)" (PR6b). */
+  aplicada_por?: string | null;
 }
 
 export type EstadoIntervencion = "pendiente" | "resuelta";

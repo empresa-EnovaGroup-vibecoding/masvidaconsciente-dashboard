@@ -273,8 +273,12 @@ export default function BandejaPage() {
                     ? a.estado === "pendiente"
                       ? "Por confirmar"
                       : a.propuesta?.resultado === "aplicada"
-                        ? "Confirmada"
-                        : "Descartada"
+                        ? a.aplicada_por === "whuilianny (WhatsApp)"
+                          ? "Confirmada por Whuilianny (WhatsApp)"
+                          : "Confirmada"
+                        : a.aplicada_por === "whuilianny (WhatsApp)"
+                          ? "Descartada por Whuilianny (WhatsApp)"
+                          : "Descartada"
                     : a.motivo_texto}
                 </span>
               </div>
@@ -322,6 +326,12 @@ export default function BandejaPage() {
                         </Link>
                       )}
                     </div>
+                    {a.propuesta?.preguntada_at && (
+                      <p className="mt-2.5 text-[12px] font-medium text-fg-muted">
+                        💰 Preguntado a Whuilianny por WhatsApp · {formatHora(a.propuesta.preguntada_at)}.
+                        Su SÍ o NO desde su celular lo resuelve solo; aquí solo si quieres adelantarte.
+                      </p>
+                    )}
                     <p className="mt-2.5 text-[12px] font-medium text-fg-faint">
                       Alejandra leyó esto en un mensaje de Whuilianny. Si es correcto, queda anotado
                       en la venta con su firma; si no, no se guarda nada. El chat no cambia de manos.
@@ -330,8 +340,12 @@ export default function BandejaPage() {
                 ) : (
                   <p className="text-[12px] font-medium text-fg-muted">
                     {a.propuesta?.resultado === "aplicada"
-                      ? "Confirmada: quedó anotada en la venta."
-                      : "Descartada: no se guardó nada."}
+                      ? a.aplicada_por === "whuilianny (WhatsApp)"
+                        ? "Confirmada por Whuilianny desde su WhatsApp: quedó anotada en la venta."
+                        : "Confirmada: quedó anotada en la venta."
+                      : a.aplicada_por === "whuilianny (WhatsApp)"
+                        ? "Descartada por Whuilianny desde su WhatsApp: no se guardó nada."
+                        : "Descartada: no se guardó nada."}
                   </p>
                 )
               ) : a.estado === "pendiente" ? (
