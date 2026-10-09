@@ -70,6 +70,7 @@ type FormState = {
   se_congela: string;
   apto_diabeticos: string;
   info: string;
+  apodos: string;
   disponible: boolean;
 };
 
@@ -84,6 +85,7 @@ const FORM_VACIO: FormState = {
   se_congela: "",
   apto_diabeticos: "",
   info: "",
+  apodos: "",
   disponible: true,
 };
 
@@ -184,6 +186,7 @@ export default function CatalogoPage() {
       se_congela: p.se_congela || "",
       apto_diabeticos: p.apto_diabeticos || "",
       info: p.info || "",
+      apodos: p.apodos || "",
       disponible: p.disponible,
     });
     setMedia([]);
@@ -388,6 +391,7 @@ export default function CatalogoPage() {
       se_congela: form.se_congela.trim() || null,
       apto_diabeticos: form.apto_diabeticos.trim() || null,
       info: form.info.trim() || null,
+      apodos: form.apodos.trim() || null,
       disponible: form.disponible,
     };
     try {
@@ -732,6 +736,15 @@ export default function CatalogoPage() {
                     value={form.info}
                     onChange={(e) => setForm({ ...form, info: e.target.value })}
                     placeholder="Alérgenos, variaciones, cualquier dato del producto…"
+                  />
+                </Campo>
+                <Campo label="Otros nombres (cómo lo llaman)" htmlFor="prod-apodos">
+                  <input
+                    id="prod-apodos"
+                    className={inputCls}
+                    value={form.apodos}
+                    onChange={(e) => setForm({ ...form, apodos: e.target.value })}
+                    placeholder="Ej. yogur, yoghurt (separados por coma)"
                   />
                 </Campo>
               </div>

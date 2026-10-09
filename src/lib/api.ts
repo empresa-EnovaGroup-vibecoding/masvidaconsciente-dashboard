@@ -170,6 +170,9 @@ export interface Producto {
   se_congela: string | null;
   apto_diabeticos: string | null;
   info: string | null;
+  // 🏷️ Otros nombres con que lo llaman ("yogur", "mini galletas"), separados por coma. El bot los usa
+  // para entender a Whuilianny y a las clientas. Opcional: un backend viejo no lo trae.
+  apodos?: string | null;
   // Días de anticipación que necesita ESTE producto (0 = puede salir el mismo día si hay stock;
   // las tortas y lo horneado, 2). El bot NO puede prometerlo para antes.
   dias_anticipacion: number;
