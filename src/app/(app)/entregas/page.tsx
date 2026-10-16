@@ -37,6 +37,33 @@ const VACIA: ZonaIn = {
   orden: 99,
 };
 
+/** 📍 Qué sectores de la zona quedaron ubicados en el mapa (OpenStreetMap) y cuáles no se encontraron.
+ *  El bot los ubica en segundo plano al guardar: tarda un minuto. */
+function EstadoDelMapa({ z }: { z: Zona }) {
+  if (!z.referencias?.trim()) {
+    return (
+      <p className="mt-1 text-xs text-fg-faint">
+        Sin sectores, el bot no puede saber esta zona por la ubicación del cliente: la pregunta.
+      </p>
+    );
+  }
+  if (!z.puntos_at) {
+    return <p className="mt-1 text-xs text-fg-faint">⏳ Ubicando los sectores en el mapa… recarga en un minuto.</p>;
+  }
+  const faltan = z.sin_ubicar ?? [];
+  return (
+    <div className="mt-1 text-xs">
+      <p className="text-fg-muted">📍 {z.sectores_ubicados ?? 0} sectores ubicados en el mapa.</p>
+      {faltan.length > 0 && (
+        <p className="text-rojo">
+          No encontré en el mapa: {faltan.join(", ")}. Revisa cómo se escriben, o pon un sitio conocido que
+          quede cerca.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function EntregasPage() {
   const [zonas, setZonas] = useState<Zona[] | null>(null);
   const [nueva, setNueva] = useState<ZonaIn>(VACIA);
@@ -211,17 +238,21 @@ export default function EntregasPage() {
 
             <div className="mt-3">
               <label className="mb-1 block text-xs font-medium text-fg-muted">
-                Barrios o sitios que entran aquí{" "}
+                {z.es_retiro ? "Dónde se retira" : "Sectores que entran en esta zona"}{" "}
                 <span className="text-fg-faint">
-                  (para que el bot no se equivoque de zona — ej: El Ujano, Obelisco…)
+                  {z.es_retiro
+                    ? "(se le dice al cliente)"
+                    : "(uno por línea o separados por comas — ej: Nueva Segovia, El Parral…). Con esto, cuando el cliente manda su ubicación, el bot sabe solo en qué zona está."}
                 </span>
               </label>
-              <input
+              <textarea
                 className={inputCls}
-                placeholder="Escribe los sitios separados por comas"
+                rows={z.es_retiro ? 1 : 3}
+                placeholder={z.es_retiro ? "La urbanización donde se retira" : "Nueva Segovia, El Parral, Santa Elena"}
                 value={z.referencias ?? ""}
                 onChange={(e) => editar(z.id, "referencias", e.target.value)}
               />
+              {!z.es_retiro && <EstadoDelMapa z={z} />}
             </div>
           </div>
         ))}
