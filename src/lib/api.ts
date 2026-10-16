@@ -783,8 +783,12 @@ export type Zona = {
   es_retiro: boolean;
   disponible: boolean;
   orden: number;
+  // 📍 (bot 044) Cuántos sectores quedaron en el mapa y cuáles no se encontraron.
+  sectores_ubicados?: number;
+  sin_ubicar?: string[];
+  puntos_at?: string | null;
 };
-export type ZonaIn = Omit<Zona, "id">;
+export type ZonaIn = Omit<Zona, "id" | "sectores_ubicados" | "sin_ubicar" | "puntos_at">;
 
 export const getZonas = () => request<Zona[]>("/api/zonas");
 export const crearZona = (z: ZonaIn) =>
